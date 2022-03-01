@@ -187,7 +187,26 @@ const struct ISL_reg_bits_struct {  //Stores one array for each register setting
     .ENABLE_FEAT_SET_WRITES = {0x08, 7, 1},
 };
 
+typedef enum {
+    CB1 = 0b000001,
+    CB2 = 0b000010,
+    CB3 = 0b000100,
+    CB4 = 0b001000,
+    CB5 = 0b010000,
+    CB6 = 0b100000,
+} isl_cb_t;
 
+typedef enum {
+    AO_OFF =        0b0000,
+    AO_VCELL1 =     0b0001,
+    AO_VCELL2 =     0b0010,
+    AO_VCELL3 =     0b0011,
+    AO_VCELL4 =     0b0100,
+    AO_VCELL5 =     0b0101,
+    AO_VCELL6 =     0b0110,
+    AO_EXTTEMP =    0b1000,
+    AO_INTTEMP =    0b1001,
+} isl_analogout_t;
 
 void ISL_Init(void);
 void ISL_ReadCellVoltages(void);
