@@ -109,6 +109,7 @@ void ClearI2CBus(){
     if (initialState[6]){
         ISL_Init();
     }
+    I2C_ERROR_FLAGS = 0;
 }
 
 
@@ -116,6 +117,9 @@ void ClearI2CBus(){
 
 void main(void)
 {
+    uint16_t sleep_timer_counter = 0;
+    I2C_ERROR_FLAGS = 0;
+    
     /* Initialize the device */
     SYSTEM_Initialize();
     TMR4_StopTimer();   //Have timer off to start with
@@ -139,15 +143,14 @@ void main(void)
     ANS_SCL = 0;
     I2C1_Init();
     ClearI2CBus();  //Clear I2C bus once on startup just in case
-    while (SDA == 0 || SCL == 0){   //If bus is still not idle, which shouldn't be possible, then keep trying to clear bus. Do not pass go. Do not collect $200.
+    while (SDA == 0 || SCL == 0){   //If bus is still not idle (meaning pins aren't high), which shouldn't be possible, then keep trying to clear bus. Do not pass go. Do not collect $200.
         __debug_break();
         ClearI2CBus();
     }
     
-    uint16_t sleep_timer_counter = 0;
-    //i2c_result = ISL_Read_Register(Config); //Read config/op status register
-    i2c_result = ISL_Read_Register(FeatureSet);  //Read Feature Set register
-    if (ISL_GetSpecificBits(ISL.PRESENT) && !i2c_result){    //if config check bit is present and featset read didn't error out
+
+    ISL_Read_Register(FeatureSet);  //Read Feature Set register in to storage and record errors if applicable
+    if (ISL_GetSpecificBits(ISL.PRESENT) && !I2C_ERROR_FLAGS){    //if config check bit is present and either featset and PRESENT read didn't error out
         Set_LED_RGB(0b001);  //Light blue LED
     }
     else{
@@ -156,11 +159,10 @@ void main(void)
      __delay_ms(2000);
      Set_LED_RGB(0b000);    // Turn off LED
     __delay_ms(1000);
+    
     while (1)
     {
-        //i2c_result = ISL_Read_Register(FeatureSet);
-        //if (!(ISL_RegData[FeatureSet] & 0b1)){    //If the ISL reset and so WKPOL != 1, fix it.
-        if (!ISL_GetSpecificBits(ISL.WKPOL)){
+        if (!ISL_GetSpecificBits(ISL.WKPOL)){//If the ISL reset and so WKPOL != 1, fix it.
             Set_LED_RGB(0b110);  //Light yellow LED
             __delay_ms(2000);
             Set_LED_RGB(0b000); //LEDs off
@@ -171,22 +173,13 @@ void main(void)
             ClearI2CBus();
         }
         
-        
-        //i2c_result = ISL_Read_Register(Config); //Read config/op status register
-        //if ((ISL_RegData[Config] & 0b00010000) && !i2c_result){    //If WKUP status = 1 and I2C read didn't error out
-        if (ISL_GetSpecificBits(ISL.WKUP_STATUS) && !I2C_ERROR_FLAGS){
+         
+        if (ISL_GetSpecificBits(ISL.WKUP_STATUS) && !I2C_ERROR_FLAGS){  //If WKUP status = 1 and I2C read didn't error out
             Set_LED_RGB(0b001);  //Light blue LED
             TMR4_StopTimer();
-            sleep_timer_counter = 0;
+            sleep_timer_counter = 0;    //Reset sleep timeout counter if we get any wakeup signal again
         }
-        else {
-            Set_LED_RGB(0b100);  //Light red LED
-            if (T4CONbits.TMR4ON == 0){
-                TMR4_StartTimer();          //Starting the timer writes to TMR4ON and scaler counters are reset on writes to TxCON
-            }
-            
-        }
-        if (I2C_ERROR_FLAGS){    //Clear I2C bus if we got an error
+        else if(I2C_ERROR_FLAGS){
             Set_LED_RGB(0b110);  //Light yellow LED
             __delay_ms(100);
             Set_LED_RGB(0b011);  //Light cyan LED
@@ -195,10 +188,14 @@ void main(void)
             __delay_ms(100);
             ClearI2CBus();
         }
-        
+        else {  //WKUP_STATUS must be 0, meaning trigger is release and charger isn't connected
+            Set_LED_RGB(0b100);  //Light red LED
+            if (T4CONbits.TMR4ON == 0){
+                TMR4_StartTimer();          //Starting the timer writes to TMR4ON and scaler counters are reset on writes to TxCON
+            }            
+        }
+
         ISL_ReadCellVoltages();
-        
-        //uint8_t volatile temp = ISL_GetSpecificBits(ISL.PRESENT);
         
         if (TMR4_HasOverflowOccured()){
             sleep_timer_counter++;

@@ -64,8 +64,7 @@ uint8_t ISL_RegData[__ISL_NUMBER_OF_REG] = {0};
 
 
 
-i2c_result_t i2c_result;
-i2c_result_t I2C_ERROR_FLAGS;
+i2c_result_t I2C_ERROR_FLAGS = 0;
 uint8_t data;
 
 
@@ -192,9 +191,9 @@ const struct ISL_reg_bits_struct {  //Stores one array for each register setting
 
 void ISL_Init(void);
 void ISL_ReadCellVoltages(void);
-i2c_result_t ISL_Read_Register(isl_reg_t reg);
-i2c_result_t ISL_Write_Register(isl_reg_t reg, uint8_t wrdata);
-i2c_result_t ISL_SetSpecificBits(const isl_locate_t params[3], uint8_t value);
+uint8_t ISL_Read_Register(isl_reg_t reg);
+void ISL_Write_Register(isl_reg_t reg, uint8_t wrdata);
+void ISL_SetSpecificBits(const isl_locate_t params[3], uint8_t value);
 uint8_t ISL_GetSpecificBits(const isl_locate_t params[3]);
 
 

@@ -4,21 +4,19 @@
 //Private functions
 static uint8_t _GenerateMask(uint8_t length);
 
-
-
 void ISL_Init(void){
     ISL_SetSpecificBits(ISL.ENABLE_FEAT_SET_WRITES, 1);
     ISL_SetSpecificBits(ISL.WKPOL, 1);
     ISL_SetSpecificBits(ISL.ENABLE_FEAT_SET_WRITES, 0);
-    //ISL_SetSpecificBits( (uint8_t []) {0x08, 5, 3}, 0b111);
 }
 
-i2c_result_t ISL_Read_Register(isl_reg_t reg){  //Allows easily retrieving an entire register. Ex. ISL_Read_Register(ISL_CONFIG_REG); result = ISL_RegData.Config
-    return I2C1_ReadMemory(ISL_ADDR, reg, &ISL_RegData[reg], 1);
+uint8_t ISL_Read_Register(isl_reg_t reg){  //Allows easily retrieving an entire register. Ex. ISL_Read_Register(ISL_CONFIG_REG); result = ISL_RegData.Config
+    I2C_ERROR_FLAGS |= I2C1_ReadMemory(ISL_ADDR, reg, &ISL_RegData[reg], 1);
+    return ISL_RegData[reg];
 }
 
-i2c_result_t ISL_Write_Register(isl_reg_t reg, uint8_t wrdata){
-    return I2C1_WriteMemory(ISL_ADDR, reg, &wrdata, 1);
+void ISL_Write_Register(isl_reg_t reg, uint8_t wrdata){
+     I2C_ERROR_FLAGS |= I2C1_WriteMemory(ISL_ADDR, reg, &wrdata, 1);
 }
 
 void ISL_ReadCellVoltages(void){
@@ -34,26 +32,22 @@ void ISL_ReadCellVoltages(void){
  * Meaning, you want to set the register 0xFF with a target location LSB of 4, a value of binary 11, which has a bit length of 2 bits.
  * This is because the value you are setting is shifted left by bit_addr.
 */
-i2c_result_t ISL_SetSpecificBits(const isl_locate_t params[3], uint8_t value){
+void ISL_SetSpecificBits(const isl_locate_t params[3], uint8_t value){
     uint8_t reg_addr = params[REG_ADDRESS];
     uint8_t bit_addr = params[BIT_ADDRESS];
     uint8_t bit_length = params[BIT_LENGTH];
-    i2c_result = ISL_Read_Register(reg_addr);
-    data = (ISL_RegData[reg_addr] & ~(_GenerateMask(bit_length) << bit_addr)) | (uint8_t) (value << bit_addr);      //Take the read data from the I2C register, zero out the bits we are setting, then OR in our data
-    i2c_result &= ISL_Write_Register(reg_addr, data);   //Doing bitwise and with previous result so we can determine if multiple errors occur
+    data = (ISL_Read_Register(reg_addr) & ~(_GenerateMask(bit_length) << bit_addr)) | (uint8_t) (value << bit_addr);      //Take the read data from the I2C register, zero out the bits we are setting, then OR in our data
+    ISL_Write_Register(reg_addr, data);   //Doing bitwise OR with previous result so we can determine if multiple errors occur
     #ifdef __DEBUG
     ISL_Read_Register(reg_addr);    //Re-read the I2C register so we can confirm any changes by watching variable values in debug.
     #endif
-    return i2c_result;
 }
 
 uint8_t ISL_GetSpecificBits(const isl_locate_t params[3]){
     uint8_t reg_addr = params[REG_ADDRESS];
     uint8_t bit_addr = params[BIT_ADDRESS];
     uint8_t bit_length = params[BIT_LENGTH];
-    I2C_ERROR_FLAGS = 0;
-    I2C_ERROR_FLAGS = ISL_Read_Register(reg_addr);
-    return (ISL_RegData[reg_addr] >> bit_addr) & _GenerateMask(bit_length); //Shift register containing data to the right until we reach the LSB of what we want, then bitwise AND to discard anything longer than the bit length
+    return (ISL_Read_Register(reg_addr) >> bit_addr) & _GenerateMask(bit_length); //Shift register containing data to the right until we reach the LSB of what we want, then bitwise AND to discard anything longer than the bit length
 }
 
 static uint8_t _GenerateMask(uint8_t length){   //Generates a given number of ones in binary. Ex. input 5 = output 0b11111
