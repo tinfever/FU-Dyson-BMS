@@ -1,24 +1,24 @@
 /**
-  @Generated PIC10 / PIC12 / PIC16 / PIC18 MCUs Source File
+  DAC Generated Driver File
 
-  @Company:
+  @Company
     Microchip Technology Inc.
 
-  @File Name:
-    mcc.c
+  @File Name
+    dac.c
 
-  @Summary:
-    This is the mcc.c file generated using PIC10 / PIC12 / PIC16 / PIC18 MCUs
+  @Summary
+    This is the generated driver implementation file for the DAC driver using PIC10 / PIC12 / PIC16 / PIC18 MCUs
 
-  @Description:
-    This header file provides implementations for driver APIs for all modules selected in the GUI.
+  @Description
+    This source file provides APIs for DAC.
     Generation Information :
         Product Revision  :  PIC10 / PIC12 / PIC16 / PIC18 MCUs - 1.81.7
         Device            :  PIC16LF1847
-        Driver Version    :  2.00
+        Driver Version    :  2.10
     The generated drivers are tested against the following:
-        Compiler          :  XC8 2.31 and above or later
-        MPLAB             :  MPLAB X 5.45
+        Compiler          :  XC8 2.31 and above
+        MPLAB 	          :  MPLAB X 5.45
 */
 
 /*
@@ -44,40 +44,36 @@
     SOFTWARE.
 */
 
-#include "mcc.h"
+/**
+  Section: Included Files
+*/
 
+#include <xc.h>
+#include "dac.h"
 
-void SYSTEM_Initialize(void)
+/**
+  Section: DAC APIs
+*/
+
+void DAC_Initialize(void)
 {
-
-    PIN_MANAGER_Initialize();
-    OSCILLATOR_Initialize();
-    WDT_Initialize();
-    DAC_Initialize();
-    TMR4_Initialize();
-    ADC_Initialize();
+    // DACOE disabled; DACEN enabled; DACLPS neg_ref; DACNSS VSS; DACPSS VREF+; 
+    //DAC is enabled, Low power state has positive voltage removed from resisitor divider, DACOUT pin disabled, VREF+ high ref, VSS low ref
+    DACCON0 = 0x84;
+    // DACR 0;
+    //Default output is 0V
+    DACCON1 = 0x00;
 }
 
-void OSCILLATOR_Initialize(void)
+void DAC_SetOutput(uint8_t inputData)
 {
-    // SCS FOSC; SPLLEN disabled; IRCF 8MHz_HF; 
-    OSCCON = 0x70;
-    // TUN 0; 
-    OSCTUNE = 0x00;
-    // SBOREN disabled; 
-    BORCON = 0x00;
-    // Wait for PLL to stabilize
-    while(PLLR == 0)
-    {
-    }
+    DACCON1  = inputData;
 }
 
-void WDT_Initialize(void)
+uint8_t DAC_GetOutput(void)
 {
-    // WDTPS 1:65536; SWDTEN OFF; 
-    WDTCON = 0x16;
+    return DACCON1;
 }
-
 /**
  End of File
 */

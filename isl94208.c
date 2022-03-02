@@ -37,7 +37,7 @@ void ISL_SetSpecificBits(const isl_locate_t params[3], uint8_t value){
     uint8_t reg_addr = params[REG_ADDRESS];
     uint8_t bit_addr = params[BIT_ADDRESS];
     uint8_t bit_length = params[BIT_LENGTH];
-    data = (ISL_Read_Register(reg_addr) & ~(_GenerateMask(bit_length) << bit_addr)) | (uint8_t) (value << bit_addr);      //Take the read data from the I2C register, zero out the bits we are setting, then OR in our data
+    uint8_t data = (ISL_Read_Register(reg_addr) & ~(_GenerateMask(bit_length) << bit_addr)) | (uint8_t) (value << bit_addr);      //Take the read data from the I2C register, zero out the bits we are setting, then OR in our data
     ISL_Write_Register(reg_addr, data);   //Doing bitwise OR with previous result so we can determine if multiple errors occur
     #ifdef __DEBUG
     ISL_Read_Register(reg_addr);    //Re-read the I2C register so we can confirm any changes by watching variable values in debug.
@@ -51,9 +51,16 @@ uint8_t ISL_GetSpecificBits(const isl_locate_t params[3]){
     return (ISL_Read_Register(reg_addr) >> bit_addr) & _GenerateMask(bit_length); //Shift register containing data to the right until we reach the LSB of what we want, then bitwise AND to discard anything longer than the bit length
 }
 
-uint8_t ISL_GetAnalogOut(isl_analogout_t value){
-    ISL_SetSpecificBits(ISL.ANALOG_OUT_SELECT_4bits, value);
-    return 1;
+uint16_t ISL_GetAnalogOut(isl_analogout_t value){
+    DAC_SetOutput(0);   //Make sure DAC is set to 0V
+    ADC_SelectChannel(ADC_PIC_DAC); //Connect ADC to 0V to empty internal ADC sample/hold capacitor
+    __delay_us(1);  //Wait a little bit
+    ADC_SelectChannel(ADC_ISL_OUT); //Connect ADC to analog out of ISL94208
+    ISL_SetSpecificBits(ISL.ANALOG_OUT_SELECT_4bits, value);    //Set the ISL to output desired signal on analog out
+    __delay_us(100); //ISL94208 has maximum analog output stabilization time of 0.1ms = 100us
+    uint16_t result = ADC_GetConversion(ADC_ISL_OUT); //Finally run the conversion and store the result
+    ISL_SetSpecificBits(ISL.ANALOG_OUT_SELECT_4bits, AO_OFF);   //Turn the ISL analog out off again
+    return result;
 }
 
 

@@ -23,9 +23,21 @@
 
 #define ISL_ADDR 0x50
 
+/*ADC Channels, Defined in adc.h
+     Discharge_Isense_AN0 =     0x0,
+    Thermistor_AN1 =            0x1,
+    ISL_AnalogOut_AN4 =         0x4,
+    channel_Temp =              0x1D,
+    channel_DAC =               0x1E,
+    channel_FVR =               0x1F
+ */
+
 #define ADC_DISCHARGE_ISENSE 0x0
 #define ADC_THERMISTOR 0x1
 #define ADC_ISL_OUT 0x4
+#define ADC_PIC_INT_TEMP 0x1D
+#define ADC_PIC_DAC 0x1E
+#define ADC_PIC_FVR 0x1F
 
 
 

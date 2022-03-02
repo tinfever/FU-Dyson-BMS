@@ -62,11 +62,7 @@ typedef enum {
 
 uint8_t ISL_RegData[__ISL_NUMBER_OF_REG] = {0};
 
-
-
 i2c_result_t I2C_ERROR_FLAGS = 0;
-uint8_t data;
-
 
 uint16_t CellVoltages[6] = {0}; //Array for cell voltages
 
@@ -214,6 +210,7 @@ uint8_t ISL_Read_Register(isl_reg_t reg);
 void ISL_Write_Register(isl_reg_t reg, uint8_t wrdata);
 void ISL_SetSpecificBits(const isl_locate_t params[3], uint8_t value);
 uint8_t ISL_GetSpecificBits(const isl_locate_t params[3]);
+uint16_t ISL_GetAnalogOut(isl_analogout_t value);
 
 
 

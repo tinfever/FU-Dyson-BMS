@@ -43,6 +43,7 @@
 
 
 
+
 #include "mcc_generated_files/mcc.h"
 #include "i2c.h"
 #include "isl94208.h"
@@ -123,6 +124,7 @@ void main(void)
     /* Initialize the device */
     SYSTEM_Initialize();
     TMR4_StopTimer();   //Have timer off to start with
+    DAC_SetOutput(0);   //Make sure DAC output is 0V = VSS
     
     /* Initialize LEDS */
     redLED = 1;  //Set high to default RED led to off
