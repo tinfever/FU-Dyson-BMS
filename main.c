@@ -197,7 +197,10 @@ void main(void)
             }            
         }
 
-        ISL_ReadCellVoltages();
+        ISL_ReadAllCellVoltages();
+        //uint8_t volatile maxcell = ISL_CalcMaxVoltageCell();
+        //uint8_t volatile mincell = ISL_CalcMinVoltageCell();
+        uint16_t volatile celldelta = ISL_CalcCellVoltageDelta();
         
         if (TMR4_HasOverflowOccured()){
             sleep_timer_counter++;

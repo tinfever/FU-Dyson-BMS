@@ -3,6 +3,7 @@
 
 //Private functions
 static uint8_t _GenerateMask(uint8_t length);
+static uint16_t _ConvertADCtoMV(uint16_t adcval);
 
 void ISL_Init(void){
     ISL_SetSpecificBits(ISL.ENABLE_FEAT_SET_WRITES, 1);
@@ -19,11 +20,7 @@ void ISL_Write_Register(isl_reg_t reg, uint8_t wrdata){
      I2C_ERROR_FLAGS |= I2C1_WriteMemory(ISL_ADDR, reg, &wrdata, 1);
 }
 
-void ISL_ReadCellVoltages(void){
-    ISL_SetSpecificBits(ISL.ANALOG_OUT_SELECT_4bits, 0b0101);   //Set analog out to cell 1 voltage
-    CellVoltages[Cell1] = (uint16_t) (((uint32_t) ADC_GetConversion(ADC_ISL_OUT) * 2500 * 2)/1024); //output = ADC/1024 bits * 2500 reference * 2x ISL scaling
-    ISL_SetSpecificBits(ISL.ANALOG_OUT_SELECT_4bits, 0b0000);   //Set analog out to high impedance output to save power
-}
+
 
 /* Sets specific bit in any register while preserving the other bits
  * When setting more than a single bit, bit_addr must be the location of the LEAST significant bit.
@@ -52,17 +49,53 @@ uint8_t ISL_GetSpecificBits(const isl_locate_t params[3]){
 }
 
 uint16_t ISL_GetAnalogOut(isl_analogout_t value){
-    DAC_SetOutput(0);   //Make sure DAC is set to 0V
-    ADC_SelectChannel(ADC_PIC_DAC); //Connect ADC to 0V to empty internal ADC sample/hold capacitor
-    __delay_us(1);  //Wait a little bit
-    ADC_SelectChannel(ADC_ISL_OUT); //Connect ADC to analog out of ISL94208
-    ISL_SetSpecificBits(ISL.ANALOG_OUT_SELECT_4bits, value);    //Set the ISL to output desired signal on analog out
-    __delay_us(100); //ISL94208 has maximum analog output stabilization time of 0.1ms = 100us
-    uint16_t result = ADC_GetConversion(ADC_ISL_OUT); //Finally run the conversion and store the result
-    ISL_SetSpecificBits(ISL.ANALOG_OUT_SELECT_4bits, AO_OFF);   //Turn the ISL analog out off again
+    DAC_SetOutput(0);   //Make sure DAC is set to 0V        8
+    ADC_SelectChannel(ADC_PIC_DAC); //Connect ADC to 0V to empty internal ADC sample/hold capacitor //16
+    __delay_us(1);  //Wait a little bit //16
+    ADC_SelectChannel(ADC_ISL_OUT); //Connect ADC to analog out of ISL94208 16
+    ISL_SetSpecificBits(ISL.ANALOG_OUT_SELECT_4bits, value);    //Set the ISL to output desired signal on analog out    11214
+    __delay_us(100); //ISL94208 has maximum analog output stabilization time of 0.1ms = 100us //11214
+    uint16_t result = ADC_GetConversion(ADC_ISL_OUT); //Finally run the conversion and store the result //12336
+    ISL_SetSpecificBits(ISL.ANALOG_OUT_SELECT_4bits, AO_OFF);   //Turn the ISL analog out off again //23557
     return result;
 }
 
+void ISL_ReadAllCellVoltages(void){
+    CellVoltages[1] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL1) );
+    CellVoltages[2] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL2) );
+    CellVoltages[3] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL3) );
+    CellVoltages[4] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL4) );
+    CellVoltages[5] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL5) );
+    CellVoltages[6] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL6) );
+}
+
+uint8_t ISL_CalcMaxVoltageCell(void){
+    uint8_t maxcell = 1;    //Start by assuming max cell is 1
+    for (uint8_t i = 2; i <= 6; i++){   //We can start with cell 2 since we already assumed cell 1 is max until proved otherwise.
+        if (CellVoltages[i] > CellVoltages[maxcell]){
+            maxcell = i;
+        }
+    }
+    return maxcell;
+}
+
+uint8_t ISL_CalcMinVoltageCell(void){
+    uint8_t mincell = 1;    //Start by assuming min cell is 1
+    for (uint8_t i = 2; i <= 6; i++){   //We can start with cell 2 since we already assumed cell 1 is min until proved otherwise.
+        if (CellVoltages[i] < CellVoltages[mincell]){
+            mincell = i;
+        }
+    }
+    return mincell;
+}
+
+uint16_t ISL_CalcCellVoltageDelta(void){
+    return (CellVoltages[ISL_CalcMaxVoltageCell()] - CellVoltages[ISL_CalcMinVoltageCell()]);
+}
+
+static uint16_t _ConvertADCtoMV(uint16_t adcval){
+    return (uint16_t) ((uint32_t)adcval * 2500 * 2 / 1024);
+}
 
 static uint8_t _GenerateMask(uint8_t length){   //Generates a given number of ones in binary. Ex. input 5 = output 0b11111
     uint8_t result = 0b1;
