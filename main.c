@@ -113,8 +113,32 @@ void ClearI2CBus(){
     I2C_ERROR_FLAGS = 0;
 }
 
+uint16_t static ConvertADCtoMV(uint16_t adcval){                //I included this function here and in isl94208 so that it could stand alone if needed. There is probably a better way to do this.
+    return (uint16_t) ((uint32_t)adcval * 2500 / 1024);
+}
 
+void ADCPrepare(void){
+    DAC_SetOutput(0);   //Make sure DAC is set to 0V
+    ADC_SelectChannel(ADC_PIC_DAC); //Connect ADC to 0V to empty internal ADC sample/hold capacitor
+    __delay_us(1);  //Wait a little bit
+}
 
+uint16_t readADCmV(adc_channel_t channel){        //Adds routine to switch to DAC VSS output to clear sample/hold capacitor before taking real reading
+    ADCPrepare();
+    return ConvertADCtoMV( ADC_GetConversion(channel) ); //Finally run the conversion and store the result
+}
+
+uint16_t dischargeIsense_mA(void){
+    ADCPrepare();
+    uint16_t adcval = ADC_GetConversion(ADC_DISCHARGE_ISENSE);
+    return (uint16_t) ((uint32_t)adcval * 2500 * 1000 / 1024 / 2);  //This better maintains precision by doing the multiplication for 2500mV VREF and 1000mA/A in one step as a uint32_t. Then we divide by 1024 ADC steps and the 2mOhm shunt resistor.
+}
+
+uint16_t volatile celldelta;
+int8_t volatile isl_int_temp;
+uint16_t volatile isl_ext_temp;
+uint16_t volatile pic_thermistor;
+uint16_t volatile discharge_current_isense_mA;
 
 void main(void)
 {
@@ -176,31 +200,63 @@ void main(void)
         }
         
          
-        if (ISL_GetSpecificBits(ISL.WKUP_STATUS) && !I2C_ERROR_FLAGS){  //If WKUP status = 1 and I2C read didn't error out
-            Set_LED_RGB(0b001);  //Light blue LED
-            TMR4_StopTimer();
-            sleep_timer_counter = 0;    //Reset sleep timeout counter if we get any wakeup signal again
-        }
-        else if(I2C_ERROR_FLAGS){
-            Set_LED_RGB(0b110);  //Light yellow LED
-            __delay_ms(100);
-            Set_LED_RGB(0b011);  //Light cyan LED
-            __delay_ms(100);
-            Set_LED_RGB(0b101);  //Light magenta LED
-            __delay_ms(100);
-            ClearI2CBus();
-        }
-        else {  //WKUP_STATUS must be 0, meaning trigger is release and charger isn't connected
-            Set_LED_RGB(0b100);  //Light red LED
-            if (T4CONbits.TMR4ON == 0){
-                TMR4_StartTimer();          //Starting the timer writes to TMR4ON and scaler counters are reset on writes to TxCON
-            }            
-        }
+//        if (ISL_GetSpecificBits(ISL.WKUP_STATUS) && !I2C_ERROR_FLAGS){  //If WKUP status = 1 and I2C read didn't error out
+//            Set_LED_RGB(0b001);  //Light blue LED
+//            TMR4_StopTimer();
+//            sleep_timer_counter = 0;    //Reset sleep timeout counter if we get any wakeup signal again
+//        }
+//        else if(I2C_ERROR_FLAGS){
+//            Set_LED_RGB(0b110);  //Light yellow LED
+//            __delay_ms(100);
+//            Set_LED_RGB(0b011);  //Light cyan LED
+//            __delay_ms(100);
+//            Set_LED_RGB(0b101);  //Light magenta LED
+//            __delay_ms(100);
+//            ClearI2CBus();
+//        }
+//        else {  //WKUP_STATUS must be 0, meaning trigger is release and charger isn't connected
+//            Set_LED_RGB(0b100);  //Light red LED
+//            if (T4CONbits.TMR4ON == 0){
+//                TMR4_StartTimer();          //Starting the timer writes to TMR4ON and scaler counters are reset on writes to TxCON
+//            }            
+//        }
 
         ISL_ReadAllCellVoltages();
         //uint8_t volatile maxcell = ISL_CalcMaxVoltageCell();
         //uint8_t volatile mincell = ISL_CalcMinVoltageCell();
-        uint16_t volatile celldelta = ISL_CalcCellVoltageDelta();
+        celldelta = ISL_CalcCellVoltageDelta();
+        isl_int_temp = ISL_GetInternalTemp();
+        isl_ext_temp = ISL_GetAnalogOut(AO_EXTTEMP);
+        pic_thermistor = readADCmV(ADC_THERMISTOR);
+        discharge_current_isense_mA = dischargeIsense_mA();
+        
+        if (ISL_GetSpecificBits(ISL.WKUP_STATUS) && CellVoltages[ISL_CalcMinVoltageCell()] > 3000 && dischargeIsense_mA() < 10000 && ISL_GetInternalTemp() < 40 && !I2C_ERROR_FLAGS){
+            Set_LED_RGB(0b111);     //White LED
+            ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 1);
+            TMR4_StopTimer();
+            sleep_timer_counter = 0;    //Reset sleep timeout counter if we get any wakeup signal again
+        }
+        else if (I2C_ERROR_FLAGS){
+           ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);
+           Set_LED_RGB(0b100);  //Red LED
+           __debug_break();
+        }
+        else if (!ISL_GetSpecificBits(ISL.WKUP_STATUS)){
+            ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);
+            Set_LED_RGB(0b001); //Blue LED
+            if (T4CONbits.TMR4ON == 0){
+                TMR4_StartTimer();          //Starting the timer writes to TMR4ON and scaler counters are reset on writes to TxCON
+            }
+        }
+        else{
+            ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);
+            Set_LED_RGB(0b110);  //Yellow LED
+            __debug_break();
+        }
+        
+        
+        
+        
         
         if (TMR4_HasOverflowOccured()){
             sleep_timer_counter++;

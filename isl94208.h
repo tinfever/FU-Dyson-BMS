@@ -66,8 +66,6 @@ i2c_result_t I2C_ERROR_FLAGS = 0;
 
 uint16_t CellVoltages[7] = {0}; //Array for cell voltages. We'll just ignore index 0 and use indexes 1-6 for cells 1-6
 
-
-
 enum {
     REG_ADDRESS = 0,
     BIT_ADDRESS = 1,
@@ -207,7 +205,7 @@ void ISL_ReadAllCellVoltages(void);
 uint8_t ISL_CalcMaxVoltageCell(void);
 uint8_t ISL_CalcMinVoltageCell(void);
 uint16_t ISL_CalcCellVoltageDelta(void);
-
+int8_t ISL_GetInternalTemp(void);
 
 
 

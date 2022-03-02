@@ -49,24 +49,24 @@ uint8_t ISL_GetSpecificBits(const isl_locate_t params[3]){
 }
 
 uint16_t ISL_GetAnalogOut(isl_analogout_t value){
-    DAC_SetOutput(0);   //Make sure DAC is set to 0V        8
-    ADC_SelectChannel(ADC_PIC_DAC); //Connect ADC to 0V to empty internal ADC sample/hold capacitor //16
-    __delay_us(1);  //Wait a little bit //16
-    ADC_SelectChannel(ADC_ISL_OUT); //Connect ADC to analog out of ISL94208 16
-    ISL_SetSpecificBits(ISL.ANALOG_OUT_SELECT_4bits, value);    //Set the ISL to output desired signal on analog out    11214
-    __delay_us(100); //ISL94208 has maximum analog output stabilization time of 0.1ms = 100us //11214
-    uint16_t result = ADC_GetConversion(ADC_ISL_OUT); //Finally run the conversion and store the result //12336
-    ISL_SetSpecificBits(ISL.ANALOG_OUT_SELECT_4bits, AO_OFF);   //Turn the ISL analog out off again //23557
+    DAC_SetOutput(0);   //Make sure DAC is set to 0V
+    ADC_SelectChannel(ADC_PIC_DAC); //Connect ADC to 0V to empty internal ADC sample/hold capacitor
+    __delay_us(1);  //Wait a little bit
+    ADC_SelectChannel(ADC_ISL_OUT); //Connect ADC to analog out of ISL94208
+    ISL_SetSpecificBits(ISL.ANALOG_OUT_SELECT_4bits, value);    //Set the ISL to output desired signal on analog out
+    __delay_us(100); //ISL94208 has maximum analog output stabilization time of 0.1ms = 100us
+    uint16_t result = ADC_GetConversion(ADC_ISL_OUT); //Finally run the conversion and store the result
+    ISL_SetSpecificBits(ISL.ANALOG_OUT_SELECT_4bits, AO_OFF);   //Turn the ISL analog out off again
     return result;
 }
 
 void ISL_ReadAllCellVoltages(void){
-    CellVoltages[1] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL1) );
-    CellVoltages[2] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL2) );
-    CellVoltages[3] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL3) );
-    CellVoltages[4] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL4) );
-    CellVoltages[5] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL5) );
-    CellVoltages[6] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL6) );
+    CellVoltages[1] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL1) )*2; //Cell voltages have  to be multiplied by two since ISL scales them down by two.
+    CellVoltages[2] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL2) )*2;
+    CellVoltages[3] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL3) )*2;
+    CellVoltages[4] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL4) )*2;
+    CellVoltages[5] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL5) )*2;
+    CellVoltages[6] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL6) )*2;
 }
 
 uint8_t ISL_CalcMaxVoltageCell(void){
@@ -93,8 +93,13 @@ uint16_t ISL_CalcCellVoltageDelta(void){
     return (CellVoltages[ISL_CalcMaxVoltageCell()] - CellVoltages[ISL_CalcMinVoltageCell()]);
 }
 
+int8_t ISL_GetInternalTemp(void){
+    int16_t adcval = (int16_t) _ConvertADCtoMV( ISL_GetAnalogOut(AO_INTTEMP) );
+    return (int8_t) (2 * ( 1310 - adcval ) / 7) + 25;    //ISL 1.31V at 25C, -3.5mV/C temp increase. Converted to mV and multiplied -3.5mV x 2 to stay as int. Using signed int so vacuum still works below freezing.
+}
+
 static uint16_t _ConvertADCtoMV(uint16_t adcval){
-    return (uint16_t) ((uint32_t)adcval * 2500 * 2 / 1024);
+    return (uint16_t) ((uint32_t)adcval * 2500 / 1024);
 }
 
 static uint8_t _GenerateMask(uint8_t length){   //Generates a given number of ones in binary. Ex. input 5 = output 0b11111
