@@ -195,18 +195,24 @@ typedef enum {
     AO_INTTEMP =    0b1001,
 } isl_analogout_t;
 
+struct {
+    uint8_t mincellnum;     //Cell number with the lowest voltage
+    uint8_t maxcellnum;     //Cell number with the highest voltage
+    uint16_t maxcell_mV;    //Voltage of highest voltage cell in mV
+    uint16_t mincell_mV;    //Voltage of lowest voltage cell in mV
+    uint16_t packdelta_mV;  //mV difference between high and lowest voltage cells
+    
+} cellstats;
+
 void ISL_Init(void);
 uint8_t ISL_Read_Register(isl_reg_t reg);
 void ISL_Write_Register(isl_reg_t reg, uint8_t wrdata);
 void ISL_SetSpecificBits(const isl_locate_t params[3], uint8_t value);
 uint8_t ISL_GetSpecificBits(const isl_locate_t params[3]);
-uint16_t ISL_GetAnalogOut(isl_analogout_t value);
+uint16_t ISL_GetAnalogOutmV(isl_analogout_t value);
 void ISL_ReadAllCellVoltages(void);
-uint8_t ISL_CalcMaxVoltageCell(void);
-uint8_t ISL_CalcMinVoltageCell(void);
-uint16_t ISL_CalcCellVoltageDelta(void);
-int8_t ISL_GetInternalTemp(void);
-
+int16_t ISL_GetInternalTemp(void);
+void ISL_calcCellStats(void);
 
 
 

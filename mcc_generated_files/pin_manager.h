@@ -117,6 +117,40 @@
 #define ISL_AnalogOut_AN4_SetAnalogMode()      do { ANSELAbits.ANSA4 = 1; } while(0)
 #define ISL_AnalogOut_AN4_SetDigitalMode()     do { ANSELAbits.ANSA4 = 0; } while(0)
 
+// get/set SV09Check_AN10 aliases
+#define SV09Check_AN10_TRIS                 TRISBbits.TRISB2
+#define SV09Check_AN10_LAT                  LATBbits.LATB2
+#define SV09Check_AN10_PORT                 PORTBbits.RB2
+#define SV09Check_AN10_WPU                  WPUBbits.WPUB2
+#define SV09Check_AN10_ANS                  ANSELBbits.ANSB2
+#define SV09Check_AN10_SetHigh()            do { LATBbits.LATB2 = 1; } while(0)
+#define SV09Check_AN10_SetLow()             do { LATBbits.LATB2 = 0; } while(0)
+#define SV09Check_AN10_Toggle()             do { LATBbits.LATB2 = ~LATBbits.LATB2; } while(0)
+#define SV09Check_AN10_GetValue()           PORTBbits.RB2
+#define SV09Check_AN10_SetDigitalInput()    do { TRISBbits.TRISB2 = 1; } while(0)
+#define SV09Check_AN10_SetDigitalOutput()   do { TRISBbits.TRISB2 = 0; } while(0)
+#define SV09Check_AN10_SetPullup()          do { WPUBbits.WPUB2 = 1; } while(0)
+#define SV09Check_AN10_ResetPullup()        do { WPUBbits.WPUB2 = 0; } while(0)
+#define SV09Check_AN10_SetAnalogMode()      do { ANSELBbits.ANSB2 = 1; } while(0)
+#define SV09Check_AN10_SetDigitalMode()     do { ANSELBbits.ANSB2 = 0; } while(0)
+
+// get/set ChrgDetect_AN7 aliases
+#define ChrgDetect_AN7_TRIS                 TRISBbits.TRISB5
+#define ChrgDetect_AN7_LAT                  LATBbits.LATB5
+#define ChrgDetect_AN7_PORT                 PORTBbits.RB5
+#define ChrgDetect_AN7_WPU                  WPUBbits.WPUB5
+#define ChrgDetect_AN7_ANS                  ANSELBbits.ANSB5
+#define ChrgDetect_AN7_SetHigh()            do { LATBbits.LATB5 = 1; } while(0)
+#define ChrgDetect_AN7_SetLow()             do { LATBbits.LATB5 = 0; } while(0)
+#define ChrgDetect_AN7_Toggle()             do { LATBbits.LATB5 = ~LATBbits.LATB5; } while(0)
+#define ChrgDetect_AN7_GetValue()           PORTBbits.RB5
+#define ChrgDetect_AN7_SetDigitalInput()    do { TRISBbits.TRISB5 = 1; } while(0)
+#define ChrgDetect_AN7_SetDigitalOutput()   do { TRISBbits.TRISB5 = 0; } while(0)
+#define ChrgDetect_AN7_SetPullup()          do { WPUBbits.WPUB5 = 1; } while(0)
+#define ChrgDetect_AN7_ResetPullup()        do { WPUBbits.WPUB5 = 0; } while(0)
+#define ChrgDetect_AN7_SetAnalogMode()      do { ANSELBbits.ANSB5 = 1; } while(0)
+#define ChrgDetect_AN7_SetDigitalMode()     do { ANSELBbits.ANSB5 = 0; } while(0)
+
 /**
    @Param
     none

@@ -45,11 +45,11 @@
 
 
 #include "mcc_generated_files/mcc.h"
+#include "main.h"
 #include "i2c.h"
 #include "isl94208.h"
 #include "config.h"
-
-
+#include "thermistor.h"
 
 void Set_LED_RGB(uint8_t RGB){  //Accepts binary input 0b000. Bit 2 = Red Enable. Bit 1 = Green Enable. Bit 0 = Red Enable. R.G.B.
     if (RGB & 0b001){
@@ -73,7 +73,6 @@ void Set_LED_RGB(uint8_t RGB){  //Accepts binary input 0b000. Bit 2 = Red Enable
         redLED = 1;
     }
 }
-
 
 void ClearI2CBus(){
     uint8_t initialState[] = {TRIS_SDA, TRIS_SCL, ANS_SDA, ANS_SCL, SDA, SCL, SSP1CON1bits.SSPEN}; //Backup initial pin setup state
@@ -134,14 +133,83 @@ uint16_t dischargeIsense_mA(void){
     return (uint16_t) ((uint32_t)adcval * 2500 * 1000 / 1024 / 2);  //This better maintains precision by doing the multiplication for 2500mV VREF and 1000mA/A in one step as a uint32_t. Then we divide by 1024 ADC steps and the 2mOhm shunt resistor.
 }
 
-uint16_t volatile celldelta;
-int8_t volatile isl_int_temp;
-uint16_t volatile isl_ext_temp;
-uint16_t volatile pic_thermistor;
-uint16_t volatile discharge_current_isense_mA;
+void checkDetect(void){
+    uint16_t result = readADCmV(ADC_CHRG_TRIG_DETECT);
+    if (result > 2000){
+        detect = CHARGER;
+    }
+    else if (result < 2000 && result > 400){
+        detect = TRIGGER;
+    }
+    else if (result < 400){
+        detect = NONE;
+    }
+    else{
+        __debug_break();    //Panic
+    }
+}
+
+modelnum_t checkModelNum (void){
+/* This function assumes that if the reading of the thermistor from the ISL is
+ * > 100mV above the reading from the PIC, we must be using an SV09 board 
+ * which has an opamp driving the ISL thermistor input to ~3.3V until the thermistor voltage
+ * goes below ~820mV, then it drives the ISL input to ~0V.
+ * The SV11 has the thermistor input to the ISL and PIC tied together since
+ * there is just the thermistor with one pull-up resistor. It uses a different voltage scale though. */
+    uint16_t isl_thermistor_reading = ISL_GetAnalogOutmV(AO_EXTTEMP);
+    uint16_t pic_thermistor_reading = readADCmV(ADC_THERMISTOR);
+    int16_t delta = (int16_t)isl_thermistor_reading - (int16_t)pic_thermistor_reading;
+    if (delta > 100){
+        return SV09;
+    }
+    else{
+        return SV11;
+    }
+}
+
+void sleep(void){
+    ISL_SetSpecificBits(ISL.SLEEP, 1);
+}
+
+void idle(void){
+    ISL_ReadAllCellVoltages();
+    ISL_calcCellStats();
+    checkDetect();
+    test = ISL_GetInternalTemp();
+    isl_thermistor = ISL_GetAnalogOutmV(AO_EXTTEMP);
+    pic_thermistor = readADCmV(ADC_THERMISTOR);
+    //thermistor_temp = 3500 / (12.6019 + ln(-1*(double)pic_thermistor/(-3.3+(double)pic_thermistor)));
+    //thermistor_temp = f(pic_thermistor);
+    //thermistor_temp = 
+}
+
+void charging(void){
+    
+}
+
+void chargingWait(void){
+    
+}
+
+void chargeOClockout(void){
+    
+}
+
+void cellBalance(void){
+    
+}
+
+void outputEN(void){
+    
+}
+
+void dischargeOClockout(void){
+    
+}
 
 void main(void)
 {
+    //INIT STEPS
     uint16_t sleep_timer_counter = 0;
     I2C_ERROR_FLAGS = 0;
     
@@ -173,102 +241,58 @@ void main(void)
         __debug_break();
         ClearI2CBus();
     }
+    modelnum = checkModelNum();
+    uint8_t volatile variable = getThermistorTemp(modelnum);
+    //INIT END
     
-
-    ISL_Read_Register(FeatureSet);  //Read Feature Set register in to storage and record errors if applicable
-    if (ISL_GetSpecificBits(ISL.PRESENT) && !I2C_ERROR_FLAGS){    //if config check bit is present and either featset and PRESENT read didn't error out
-        Set_LED_RGB(0b001);  //Light blue LED
-    }
-    else{
-        Set_LED_RGB(0b100);  //Light red LED
-    }
-     __delay_ms(2000);
-     Set_LED_RGB(0b000);    // Turn off LED
-    __delay_ms(1000);
+    state = IDLE;
     
     while (1)
     {
-        if (!ISL_GetSpecificBits(ISL.WKPOL)){//If the ISL reset and so WKPOL != 1, fix it.
-            Set_LED_RGB(0b110);  //Light yellow LED
-            __delay_ms(2000);
-            Set_LED_RGB(0b000); //LEDs off
-            __delay_ms(2000);
-            Set_LED_RGB(0b110);  //Light yellow LED
-            __delay_ms(2000);
-            Set_LED_RGB(0b000); //LEDs off
-            ClearI2CBus();
-        }
-        
-         
-//        if (ISL_GetSpecificBits(ISL.WKUP_STATUS) && !I2C_ERROR_FLAGS){  //If WKUP status = 1 and I2C read didn't error out
-//            Set_LED_RGB(0b001);  //Light blue LED
-//            TMR4_StopTimer();
-//            sleep_timer_counter = 0;    //Reset sleep timeout counter if we get any wakeup signal again
-//        }
-//        else if(I2C_ERROR_FLAGS){
-//            Set_LED_RGB(0b110);  //Light yellow LED
-//            __delay_ms(100);
-//            Set_LED_RGB(0b011);  //Light cyan LED
-//            __delay_ms(100);
-//            Set_LED_RGB(0b101);  //Light magenta LED
-//            __delay_ms(100);
-//            ClearI2CBus();
-//        }
-//        else {  //WKUP_STATUS must be 0, meaning trigger is release and charger isn't connected
-//            Set_LED_RGB(0b100);  //Light red LED
-//            if (T4CONbits.TMR4ON == 0){
-//                TMR4_StartTimer();          //Starting the timer writes to TMR4ON and scaler counters are reset on writes to TxCON
-//            }            
-//        }
-
-        ISL_ReadAllCellVoltages();
-        //uint8_t volatile maxcell = ISL_CalcMaxVoltageCell();
-        //uint8_t volatile mincell = ISL_CalcMinVoltageCell();
-        celldelta = ISL_CalcCellVoltageDelta();
-        isl_int_temp = ISL_GetInternalTemp();
-        isl_ext_temp = ISL_GetAnalogOut(AO_EXTTEMP);
-        pic_thermistor = readADCmV(ADC_THERMISTOR);
-        discharge_current_isense_mA = dischargeIsense_mA();
-        
-        if (ISL_GetSpecificBits(ISL.WKUP_STATUS) && CellVoltages[ISL_CalcMinVoltageCell()] > 3000 && dischargeIsense_mA() < 10000 && ISL_GetInternalTemp() < 40 && !I2C_ERROR_FLAGS){
-            Set_LED_RGB(0b111);     //White LED
-            ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 1);
-            TMR4_StopTimer();
-            sleep_timer_counter = 0;    //Reset sleep timeout counter if we get any wakeup signal again
-        }
-        else if (I2C_ERROR_FLAGS){
-           ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);
-           Set_LED_RGB(0b100);  //Red LED
-           __debug_break();
-        }
-        else if (!ISL_GetSpecificBits(ISL.WKUP_STATUS)){
-            ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);
-            Set_LED_RGB(0b001); //Blue LED
-            if (T4CONbits.TMR4ON == 0){
-                TMR4_StartTimer();          //Starting the timer writes to TMR4ON and scaler counters are reset on writes to TxCON
-            }
-        }
-        else{
-            ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);
-            Set_LED_RGB(0b110);  //Yellow LED
+        if (!ISL_GetSpecificBits(ISL.WKPOL)){//If somehow the ISL was reset and so WKPOL isn't correct, reinitialize everything and clear the I2C bus.
             __debug_break();
+            I2C1_Init();
+            ClearI2CBus();
+            I2C_ERROR_FLAGS = 0;    //Clear error flags
         }
         
         
-        
-        
-        
-        if (TMR4_HasOverflowOccured()){
-            sleep_timer_counter++;
+        switch(state){
+            case SLEEP:
+                sleep();
+                break;
+            
+            case IDLE:
+                idle();
+                break;
+                
+            case CHARGING:
+                charging();
+                break;
+                
+            case CHARGING_WAIT:
+                chargingWait();
+                break;
+                
+            case CHARGE_OC_LOCKOUT:
+                chargeOClockout();
+                break;
+                
+            case CELL_BALANCE:
+                cellBalance();
+                break;
+                
+            case OUTPUT_EN:
+                outputEN();
+                break;
+                
+            case DISCHARGE_OC_LOCKOUT:
+                dischargeOClockout();
+                break;  
         }
         
-        if (sleep_timer_counter > 156){ //sleep if idle for 5 seconds (32ms TMR4 period * 156 overflow events = 4.992 seconds)
-            //go to sleep
-            Set_LED_RGB(111);   //Set LED White
-            __delay_ms(2000);
-            Set_LED_RGB(000);   //Turn off LED
-            ISL_SetSpecificBits(ISL.SLEEP, 1);
-        }
+        
+
 
         
         #ifdef __DEBUG

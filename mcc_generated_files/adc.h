@@ -97,6 +97,8 @@ typedef enum
     Discharge_Isense_AN0 =  0x0,
     Thermistor_AN1 =  0x1,
     ISL_AnalogOut_AN4 =  0x4,
+    ChrgDetect_AN7 =  0x7,
+    SV09Check_AN10 =  0xA,
     channel_Temp =  0x1D,
     channel_DAC =  0x1E,
     channel_FVR =  0x1F

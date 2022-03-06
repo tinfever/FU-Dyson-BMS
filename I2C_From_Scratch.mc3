@@ -56,7 +56,7 @@
       </entry>
       <entry>
          <key class="com.microchip.mcc.core.tokenManager.CustomKey" moduleName="ADC" name="AN10"/>
-         <value>disabled</value>
+         <value>enabled</value>
       </entry>
       <entry>
          <key class="com.microchip.mcc.core.tokenManager.CustomKey" moduleName="ADC" name="AN11"/>
@@ -84,7 +84,7 @@
       </entry>
       <entry>
          <key class="com.microchip.mcc.core.tokenManager.CustomKey" moduleName="ADC" name="AN7"/>
-         <value>disabled</value>
+         <value>enabled</value>
       </entry>
       <entry>
          <key class="com.microchip.mcc.core.tokenManager.CustomKey" moduleName="ADC" name="AN8"/>
@@ -740,7 +740,7 @@
       </entry>
       <entry>
          <key class="com.microchip.mcc.core.tokenManager.CustomKey" moduleName="Pin Module" name="Custom Name RB2"/>
-         <value/>
+         <value>SV09Check_AN10</value>
       </entry>
       <entry>
          <key class="com.microchip.mcc.core.tokenManager.CustomKey" moduleName="Pin Module" name="Custom Name RB3"/>
@@ -752,7 +752,7 @@
       </entry>
       <entry>
          <key class="com.microchip.mcc.core.tokenManager.CustomKey" moduleName="Pin Module" name="Custom Name RB5"/>
-         <value/>
+         <value>ChrgDetect_AN7</value>
       </entry>
       <entry>
          <key class="com.microchip.mcc.core.tokenManager.CustomKey" moduleName="Pin Module" name="Custom Name RB6"/>
@@ -920,7 +920,7 @@
       </entry>
       <entry>
          <key class="com.microchip.mcc.core.tokenManager.CustomKey" moduleName="Pin Module" name="customNameUserSet RB2"/>
-         <value>disabled</value>
+         <value>enabled</value>
       </entry>
       <entry>
          <key class="com.microchip.mcc.core.tokenManager.CustomKey" moduleName="Pin Module" name="customNameUserSet RB3"/>
@@ -932,7 +932,7 @@
       </entry>
       <entry>
          <key class="com.microchip.mcc.core.tokenManager.CustomKey" moduleName="Pin Module" name="customNameUserSet RB5"/>
-         <value>disabled</value>
+         <value>enabled</value>
       </entry>
       <entry>
          <key class="com.microchip.mcc.core.tokenManager.CustomKey" moduleName="Pin Module" name="customNameUserSet RB6"/>
@@ -2759,58 +2759,58 @@
          <value>OFF</value>
       </entry>
    </tokenMap>
-   <generatedFileHashHistoryMap class="java.util.HashMap">
-      <entry>
-         <file>mcc_generated_files\mcc.h</file>
-         <hash>0f6c104ba67fdd39dff9ced19b980163985016adf1420ef99889f7d4e77b15e5</hash>
-      </entry>
-      <entry>
-         <file>mcc_generated_files\device_config.h</file>
-         <hash>18a3aa962ae664f97fbbdb26cdf766fd2d2b0fcf61ca24503eef85faad5b1fc7</hash>
-      </entry>
-      <entry>
-         <file>mcc_generated_files\tmr4.h</file>
-         <hash>64af8461abb2b89485d673d1f17bbf74988c0dd16fd372d2de565ff6c8786fcf</hash>
-      </entry>
+   <generatedFileHashHistoryMap class="java.util.TreeMap">
       <entry>
          <file>main.c</file>
          <hash>6ef847ac54d9ac82d20bab263a83d68cfa16afc0bdb997d4a74d0d31f9dc792f</hash>
-      </entry>
-      <entry>
-         <file>mcc_generated_files\device_config.c</file>
-         <hash>05661601746403d988e8bf05dbda3215e5199ac9febdb8016f313deb0c1b66ca</hash>
-      </entry>
-      <entry>
-         <file>mcc_generated_files\pin_manager.h</file>
-         <hash>70f35be5f7d2efee87fc378174a7babd4a62de0d31f258ca5b3bc0cec4c01fbc</hash>
-      </entry>
-      <entry>
-         <file>mcc_generated_files\tmr4.c</file>
-         <hash>d007278af0f8a284f26c0b067c8a1c6e60472ba329b2f108cdb9b5e49b107018</hash>
-      </entry>
-      <entry>
-         <file>mcc_generated_files\adc.h</file>
-         <hash>6c7cb5e7a4cd6c2b34c88bf99cefca5e201b637b6817d383e07c068a129e7f59</hash>
-      </entry>
-      <entry>
-         <file>mcc_generated_files\pin_manager.c</file>
-         <hash>13190f9b787fd61da9a96c83a4a307716477169b38c2fcf5ffbe2ba636795093</hash>
-      </entry>
-      <entry>
-         <file>mcc_generated_files\dac.c</file>
-         <hash>afc7fcd3748d934a9161b7d11f992b4a63bea380be6d8d1ef4eea9167f9ce36f</hash>
       </entry>
       <entry>
          <file>mcc_generated_files\adc.c</file>
          <hash>3f27ed376d12e8ad1868b98decbb73be4aacf5c2a97f7610dcba7ffaf4b673a2</hash>
       </entry>
       <entry>
+         <file>mcc_generated_files\adc.h</file>
+         <hash>3919f6cf39a42082c8e6e3b3538145b49d7ded4a9718920f84baed56103e60b4</hash>
+      </entry>
+      <entry>
+         <file>mcc_generated_files\dac.c</file>
+         <hash>afc7fcd3748d934a9161b7d11f992b4a63bea380be6d8d1ef4eea9167f9ce36f</hash>
+      </entry>
+      <entry>
          <file>mcc_generated_files\dac.h</file>
          <hash>2d34ba69837d099d352b660d0c3365173948be82a6588b24ca3c3980b7b0eca8</hash>
       </entry>
       <entry>
+         <file>mcc_generated_files\device_config.c</file>
+         <hash>05661601746403d988e8bf05dbda3215e5199ac9febdb8016f313deb0c1b66ca</hash>
+      </entry>
+      <entry>
+         <file>mcc_generated_files\device_config.h</file>
+         <hash>18a3aa962ae664f97fbbdb26cdf766fd2d2b0fcf61ca24503eef85faad5b1fc7</hash>
+      </entry>
+      <entry>
          <file>mcc_generated_files\mcc.c</file>
          <hash>e3a12df6b550b27cd7fbfb71eae8493cf790dd51d0a64bfec7590105bd4ef9b7</hash>
+      </entry>
+      <entry>
+         <file>mcc_generated_files\mcc.h</file>
+         <hash>0f6c104ba67fdd39dff9ced19b980163985016adf1420ef99889f7d4e77b15e5</hash>
+      </entry>
+      <entry>
+         <file>mcc_generated_files\pin_manager.c</file>
+         <hash>13190f9b787fd61da9a96c83a4a307716477169b38c2fcf5ffbe2ba636795093</hash>
+      </entry>
+      <entry>
+         <file>mcc_generated_files\pin_manager.h</file>
+         <hash>6bff1bf6473f35165bf1e2e6de8912706dc6eb6fe3f715a013c1a9b13c60aa66</hash>
+      </entry>
+      <entry>
+         <file>mcc_generated_files\tmr4.c</file>
+         <hash>d007278af0f8a284f26c0b067c8a1c6e60472ba329b2f108cdb9b5e49b107018</hash>
+      </entry>
+      <entry>
+         <file>mcc_generated_files\tmr4.h</file>
+         <hash>64af8461abb2b89485d673d1f17bbf74988c0dd16fd372d2de565ff6c8786fcf</hash>
       </entry>
    </generatedFileHashHistoryMap>
 </config>

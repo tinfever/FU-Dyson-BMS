@@ -48,7 +48,7 @@ uint8_t ISL_GetSpecificBits(const isl_locate_t params[3]){
     return (ISL_Read_Register(reg_addr) >> bit_addr) & _GenerateMask(bit_length); //Shift register containing data to the right until we reach the LSB of what we want, then bitwise AND to discard anything longer than the bit length
 }
 
-uint16_t ISL_GetAnalogOut(isl_analogout_t value){
+uint16_t ISL_GetAnalogOutmV(isl_analogout_t value){
     DAC_SetOutput(0);   //Make sure DAC is set to 0V
     ADC_SelectChannel(ADC_PIC_DAC); //Connect ADC to 0V to empty internal ADC sample/hold capacitor
     __delay_us(1);  //Wait a little bit
@@ -57,45 +57,41 @@ uint16_t ISL_GetAnalogOut(isl_analogout_t value){
     __delay_us(100); //ISL94208 has maximum analog output stabilization time of 0.1ms = 100us
     uint16_t result = ADC_GetConversion(ADC_ISL_OUT); //Finally run the conversion and store the result
     ISL_SetSpecificBits(ISL.ANALOG_OUT_SELECT_4bits, AO_OFF);   //Turn the ISL analog out off again
-    return result;
+    return _ConvertADCtoMV(result); //returns analog output in mV
 }
 
 void ISL_ReadAllCellVoltages(void){
-    CellVoltages[1] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL1) )*2; //Cell voltages have  to be multiplied by two since ISL scales them down by two.
-    CellVoltages[2] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL2) )*2;
-    CellVoltages[3] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL3) )*2;
-    CellVoltages[4] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL4) )*2;
-    CellVoltages[5] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL5) )*2;
-    CellVoltages[6] = _ConvertADCtoMV( ISL_GetAnalogOut(AO_VCELL6) )*2;
+    CellVoltages[1] = ISL_GetAnalogOutmV(AO_VCELL1)*2; //Cell voltages have  to be multiplied by two since ISL scales them down by two.
+    CellVoltages[2] = ISL_GetAnalogOutmV(AO_VCELL2)*2;
+    CellVoltages[3] = ISL_GetAnalogOutmV(AO_VCELL3)*2;
+    CellVoltages[4] = ISL_GetAnalogOutmV(AO_VCELL4)*2;
+    CellVoltages[5] = ISL_GetAnalogOutmV(AO_VCELL5)*2;
+    CellVoltages[6] = ISL_GetAnalogOutmV(AO_VCELL6)*2;
 }
 
-uint8_t ISL_CalcMaxVoltageCell(void){
+void ISL_calcCellStats(void){
     uint8_t maxcell = 1;    //Start by assuming max cell is 1
-    for (uint8_t i = 2; i <= 6; i++){   //We can start with cell 2 since we already assumed cell 1 is max until proved otherwise.
-        if (CellVoltages[i] > CellVoltages[maxcell]){
-            maxcell = i;
-        }
-    }
-    return maxcell;
-}
-
-uint8_t ISL_CalcMinVoltageCell(void){
     uint8_t mincell = 1;    //Start by assuming min cell is 1
-    for (uint8_t i = 2; i <= 6; i++){   //We can start with cell 2 since we already assumed cell 1 is min until proved otherwise.
+    for (uint8_t i = 2; i <= 6; i++){   //We can start with cell 2 since we already assumed cell 1 is max/min until proved otherwise.
+        if (CellVoltages[i] > CellVoltages[maxcell]){
+            maxcell = i;    //If this cell is higher that the currently recorded max cell voltage, make it the new max cell.
+        }
         if (CellVoltages[i] < CellVoltages[mincell]){
-            mincell = i;
+            mincell = i;    //If this cell is lower that the currently recorded max cell voltage, make it the new min cell.
         }
     }
-    return mincell;
+    cellstats.maxcellnum = maxcell;
+    cellstats.maxcell_mV = CellVoltages[maxcell];
+    cellstats.mincellnum = mincell;
+    cellstats.mincell_mV = CellVoltages[mincell];
+    cellstats.packdelta_mV = cellstats.maxcell_mV - cellstats.mincell_mV;
 }
 
-uint16_t ISL_CalcCellVoltageDelta(void){
-    return (CellVoltages[ISL_CalcMaxVoltageCell()] - CellVoltages[ISL_CalcMinVoltageCell()]);
-}
 
-int8_t ISL_GetInternalTemp(void){
-    int16_t adcval = (int16_t) _ConvertADCtoMV( ISL_GetAnalogOut(AO_INTTEMP) );
-    return (int8_t) (2 * ( 1310 - adcval ) / 7) + 25;    //ISL 1.31V at 25C, -3.5mV/C temp increase. Converted to mV and multiplied -3.5mV x 2 to stay as int. Using signed int so vacuum still works below freezing.
+
+int16_t ISL_GetInternalTemp(void){
+    int16_t adcval = (int16_t) ISL_GetAnalogOutmV(AO_INTTEMP);
+    return (int16_t) (2 * ( 1310 - adcval ) / 7) + 25;    //ISL 1.31V at 25C, -3.5mV/C temp increase. Converted to mV and multiplied -3.5mV x 2 to stay as int. Using signed int so vacuum still works below freezing.
 }
 
 static uint16_t _ConvertADCtoMV(uint16_t adcval){

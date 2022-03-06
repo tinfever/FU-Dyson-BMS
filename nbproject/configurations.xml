@@ -16,6 +16,8 @@
       </logicalFolder>
       <itemPath>isl94208.h</itemPath>
       <itemPath>config.h</itemPath>
+      <itemPath>thermistor.h</itemPath>
+      <itemPath>main.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -38,6 +40,7 @@
       <itemPath>i2c.c</itemPath>
       <itemPath>i2c.h</itemPath>
       <itemPath>isl94208.c</itemPath>
+      <itemPath>thermistor.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"

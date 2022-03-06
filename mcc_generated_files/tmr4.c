@@ -62,6 +62,7 @@
 void TMR4_Initialize(void)
 {
     // Set TMR4 to the options selected in the User Interface
+    //2ms per tick, 32ms per TMR4IF
 
     // PR4 249; 
     PR4 = 0xF9;

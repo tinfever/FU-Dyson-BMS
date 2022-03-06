@@ -63,7 +63,8 @@ void I2C1_Init(void)
 {
     SSP1CON1bits.SSPM=0x08;         // I2C Master mode, clock = Fosc/(4 * (SSPADD+1))
     SSP1CON1bits.SSPEN=1;           // enable MSSP port
-    SSP1ADD = 0x4F;                 // set Baud rate clock divider (100KHz for 32MHz clock)
+    //SSP1ADD = 0x4F;                 // set Baud rate clock divider (100KHz for 32MHz clock)
+    SSP1ADD = 0x13;                 // set Baud rate clock divider (400KHz for 32MHz clock)
     __delay_us(5);                  // let everything settle.
 }
 

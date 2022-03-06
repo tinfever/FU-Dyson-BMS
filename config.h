@@ -38,9 +38,8 @@
 #define ADC_PIC_INT_TEMP 0x1D
 #define ADC_PIC_DAC 0x1E
 #define ADC_PIC_FVR 0x1F
-
-
-
+#define ADC_CHRG_TRIG_DETECT 0x07
+#define ADC_SV09CHECK 0x0A
 
 
 
