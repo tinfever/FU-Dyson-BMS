@@ -10,28 +10,30 @@ uint8_t getThermistorTemp (modelnum_t modelnum){
     
     uint16_t pic_thermistor = readADCmV(ADC_THERMISTOR);
     
-    modelnum = SV11;
     
-    uint8_t increment = LUT_SIZE[modelnum]/2;
-    uint8_t index = increment;   //start at midpoint of array
+    uint8_t iteration = 1;
+    int16_t increment = LUT_SIZE[modelnum]/(1 << iteration);    //Making this larger and signed because I'm concerned about going out of bounds and being unable to check
+    uint8_t index = (uint8_t) increment;   //start at midpoint of array
+    
     
     
     //Until we find the index where the voltage at i is less than our read value and the voltage at i+1 is greater than our read value
     //Meaning we found the two index values our read value is between
     while ( !(ThermistorLUT[modelnum][index][voltage] * 10 <= pic_thermistor) || !(ThermistorLUT[modelnum][index+1][voltage] * 10 > pic_thermistor)  ){    //&& !( (ThermistorLUT[modelnum][index+1][voltage] * 10) > pic_thermistor)
-        if (increment >= 2) increment = increment/2; //Keep halving the increment but make sure increment doesn't go to zero
-        
-        if ( index + increment > LUT_SIZE[modelnum] - 1 || index - increment <= 0){ //if the next increment step would go out of bounds, just break. Subtract one because arrays are zero indexed
+        iteration++;
+        if (increment >= 2) increment = LUT_SIZE[modelnum]/(1 << iteration); //Keep halving the increment but make sure increment doesn't go to zero. Using bit shift to calculate power of two, diving LUT_SIZE by bit shift so we don't get successive rounding errors by just dividing the previous increment by two
+        if (increment < 1) increment = 1;   //Make sure increment can't go below one
+        if ( index + increment > LUT_SIZE[modelnum] - 1 || index - increment < 0){ //if the next increment step would go out of bounds, just break. Subtract one because arrays are zero indexed
             break;
         }
         
         if (ThermistorLUT[modelnum][index][voltage] * 10 < pic_thermistor){
             //Index num is too low
-            index = index + increment;
+            index = index + (uint8_t) increment;
         }
         else if (ThermistorLUT[modelnum][index][voltage] * 10 > pic_thermistor){
             //Index is too high
-            index = index - increment;
+            index = index - (uint8_t) increment;
         }
     }
     

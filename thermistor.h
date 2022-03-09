@@ -32,6 +32,8 @@ enum {
  * Cell L5 = 3.3 = Vin for resistor divider calc
  * Cell L6 = 23700 = Thermistor series resistor / voltage divider resistance in Ohms
  */
+
+//You could probably save 160 bytes of flash by removing the celsius values and using the array index as the temperature. Just have to add handling for when two temps would have same voltage.
 #define SV09_LUT_SIZE_DEF 93
 uint8_t const SV09_LUT_SIZE = SV09_LUT_SIZE_DEF;
 uint8_t const SV09_thermistor_LUT[SV09_LUT_SIZE_DEF][2] = {

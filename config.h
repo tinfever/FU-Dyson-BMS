@@ -41,7 +41,8 @@
 #define ADC_CHRG_TRIG_DETECT 0x07
 #define ADC_SV09CHECK 0x0A
 
-
+const uint8_t MAX_CHARGE_TEMP_C = 50;           //Celsius
+const uint8_t MAX_DISCHARGE_TEMP_C = 60;        //Celsius
 
 
 

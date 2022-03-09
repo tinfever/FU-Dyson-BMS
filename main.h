@@ -12,7 +12,8 @@
 
 
 enum {
-    SLEEP = 0,
+    INIT = 0,
+    SLEEP,
     IDLE,
     CHARGING,
     CHARGING_WAIT,
@@ -20,13 +21,16 @@ enum {
     CELL_BALANCE,
     OUTPUT_EN,
     DISCHARGE_OC_LOCKOUT,
+    ERROR,
 } state;
 
-enum{
+typedef enum{
     NONE = 0,
     TRIGGER,
     CHARGER
-} detect;
+} detect_t;
+
+detect_t volatile detect;
 
 typedef enum {
     SV09 = 0,
@@ -34,12 +38,26 @@ typedef enum {
     NUM_OF_MODELS,
 } modelnum_t;
 
-
-int16_t volatile test;
-uint16_t volatile isl_thermistor;
-uint16_t volatile pic_thermistor;
-double volatile thermistor_temp;
 modelnum_t volatile modelnum;
+
+int16_t volatile isl_int_temp;
+uint8_t volatile thermistor_temp;
+uint16_t charge_wait_timer = 0;
+bool charge_complete_flag = false;
+
+typedef struct {
+    uint16_t value;
+    bool enable;
+} counter_t;
+
+typedef struct {
+    uint32_t value;
+    bool enable;
+} big_counter_t;
+
+counter_t charge_wait_counter = {0,0};
+big_counter_t charge_duration_counter = {0,0};
+counter_t sleep_timeout_counter = {0,0};
 
 uint16_t readADCmV(adc_channel_t channel);
 

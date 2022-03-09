@@ -133,19 +133,16 @@ uint16_t dischargeIsense_mA(void){
     return (uint16_t) ((uint32_t)adcval * 2500 * 1000 / 1024 / 2);  //This better maintains precision by doing the multiplication for 2500mV VREF and 1000mA/A in one step as a uint32_t. Then we divide by 1024 ADC steps and the 2mOhm shunt resistor.
 }
 
-void checkDetect(void){
+detect_t checkDetect(void){
     uint16_t result = readADCmV(ADC_CHRG_TRIG_DETECT);
     if (result > 2000){
-        detect = CHARGER;
+        return CHARGER;
     }
     else if (result < 2000 && result > 400){
-        detect = TRIGGER;
-    }
-    else if (result < 400){
-        detect = NONE;
+        return TRIGGER;
     }
     else{
-        __debug_break();    //Panic
+        return NONE;
     }
 }
 
@@ -167,55 +164,14 @@ modelnum_t checkModelNum (void){
     }
 }
 
-void sleep(void){
-    ISL_SetSpecificBits(ISL.SLEEP, 1);
-}
-
-void idle(void){
-    ISL_ReadAllCellVoltages();
-    ISL_calcCellStats();
-    checkDetect();
-    test = ISL_GetInternalTemp();
-    isl_thermistor = ISL_GetAnalogOutmV(AO_EXTTEMP);
-    pic_thermistor = readADCmV(ADC_THERMISTOR);
-    //thermistor_temp = 3500 / (12.6019 + ln(-1*(double)pic_thermistor/(-3.3+(double)pic_thermistor)));
-    //thermistor_temp = f(pic_thermistor);
-    //thermistor_temp = 
-}
-
-void charging(void){
+void init(void){
+//INIT STEPS
     
-}
-
-void chargingWait(void){
-    
-}
-
-void chargeOClockout(void){
-    
-}
-
-void cellBalance(void){
-    
-}
-
-void outputEN(void){
-    
-}
-
-void dischargeOClockout(void){
-    
-}
-
-void main(void)
-{
-    //INIT STEPS
-    uint16_t sleep_timer_counter = 0;
     I2C_ERROR_FLAGS = 0;
     
     /* Initialize the device */
     SYSTEM_Initialize();
-    TMR4_StopTimer();   //Have timer off to start with
+    TMR4_StartTimer();   //Keep timer running
     DAC_SetOutput(0);   //Make sure DAC output is 0V = VSS
     
     /* Initialize LEDS */
@@ -242,10 +198,153 @@ void main(void)
         ClearI2CBus();
     }
     modelnum = checkModelNum();
-    uint8_t volatile variable = getThermistorTemp(modelnum);
     //INIT END
     
     state = IDLE;
+}
+
+void sleep(void){
+    ISL_SetSpecificBits(ISL.SLEEP, 1);
+}
+
+void idle(void){
+    Set_LED_RGB(0b010); //LED Green
+    //TODO: Add I2C error check here
+    
+    if (detect == TRIGGER){
+        sleep_timeout_counter.enable = false;   //We aren't going to be sleeping soon
+        sleep_timeout_counter.value = 0;
+    }
+    
+    if (detect == CHARGER                       //Charger is connected
+        && charge_complete_flag == false         //We haven't already done a complete charge cycle
+        && cellstats.maxcell_mV < 4200          //Max cell < 4.20V
+        && isl_int_temp < MAX_CHARGE_TEMP_C     //Make sure temps are OK
+        && thermistor_temp < MAX_CHARGE_TEMP_C
+        && ISL_GetSpecificBits(ISL.WKUP_STATUS) //Make sure WKUP = 1 meaning charger connected or trigger presse
+        && ISL_RegData[Status] == 0){           //Verify no status error flags
+        sleep_timeout_counter.enable = false;   //We aren't going to be sleeping soon
+        sleep_timeout_counter.value = 0;
+        state = CHARGING; 
+    }
+    
+    if (charge_complete_flag == true && cellstats.maxcell_mV < 4100){      //If the max cell voltage is below 4100mV and the pack is marked as fully charged, unmark it as charged.
+        charge_complete_flag = false;
+    }
+    
+    if (detect == NONE && ISL_GetSpecificBits(ISL.WKUP_STATUS) == 0 && sleep_timeout_counter.enable == false){
+        sleep_timeout_counter.value = 0;
+        sleep_timeout_counter.enable = true;
+    }
+    
+    if (sleep_timeout_counter.value >  156 && detect != CHARGER && sleep_timeout_counter.enable == true){    //938*32ms = 30.016s //If we are in IDLE state for 30 seconds and not on the charger, go to sleep. We will stay awake on the charger since we have power to spare and can then make sure battery voltages don't drop over time.
+        sleep_timeout_counter.enable = false;
+        sleep_timeout_counter.value = 0;
+        state = SLEEP;
+    }
+    
+    
+}
+
+void charging(void){
+
+    if (!ISL_GetSpecificBits(ISL.ENABLE_CHARGE_FET)     //if we aren't already charging
+        && detect == CHARGER
+        && cellstats.maxcell_mV < 4200
+        && isl_int_temp < MAX_CHARGE_TEMP_C
+        && thermistor_temp < MAX_CHARGE_TEMP_C
+        && ISL_GetSpecificBits(ISL.WKUP_STATUS)
+        && ISL_RegData[Status] == 0)
+        {
+        charge_duration_counter.value = 0;
+        charge_duration_counter.enable = true;          //Start charge timer
+        ISL_SetSpecificBits(ISL.ENABLE_CHARGE_FET, 1);  //Enable Charging
+        Set_LED_RGB(0b111); //White LED
+    }
+    else if (ISL_GetSpecificBits(ISL.ENABLE_CHARGE_FET)     //same as above but we are already charging and all conditions are good
+        && detect == CHARGER
+        && cellstats.maxcell_mV < 4200
+        && isl_int_temp < MAX_CHARGE_TEMP_C
+        && thermistor_temp < MAX_CHARGE_TEMP_C
+        && ISL_GetSpecificBits(ISL.WKUP_STATUS)
+        && ISL_RegData[Status] == 0){
+        //do nothing
+    }
+    else if (cellstats.maxcell_mV >= 4200){         //Target voltage reached
+        ISL_SetSpecificBits(ISL.ENABLE_CHARGE_FET, 0); //Disable Charging
+        charge_duration_counter.enable = false;         //Stop charge timer
+        if (charge_duration_counter.value < 313){   //313 * 32ms = 10.016s, if it took less than 10 seconds for max cell voltage to be > 4.20v, mark charge complete
+            charge_complete_flag = true;
+            state = IDLE;
+        }
+        else{       //Go to charge wait state and wait 70 seconds before starting next charge cycle
+            charge_wait_counter.value = 0;
+            charge_wait_counter.enable = true;  //Clear and start charge wait counter
+            state = CHARGING_WAIT;
+        }
+    }
+    else if (ISL_RegData[Status] != 0){     //There was an error
+        ISL_SetSpecificBits(ISL.ENABLE_CHARGE_FET, 0); //Disable Charging
+        charge_duration_counter.enable = false;         //Stop charge timer
+        if (ISL_RegData[Status] & 0b1){     //Error was charge overcurrent flag
+            state = CHARGE_OC_LOCKOUT; 
+        }
+        else{   //It must be either an int over-temp, ext over-temp, discharge SC/OC error (discharge shouldn't be possible though)
+            state = ERROR;
+        }
+        
+    }
+    else{                                   //charger removed or manual temp read overtemp
+        ISL_SetSpecificBits(ISL.ENABLE_CHARGE_FET, 0); //Disable Charging
+        charge_duration_counter.enable = false;         //Stop charge timer
+        state = IDLE;
+    }
+    
+    
+}
+
+void chargingWait(void){
+    Set_LED_RGB(0b001); //Blue LED
+    if (charge_wait_counter.value >= 2188){         //2188 * 32ms = 70.016 seconds
+        charge_wait_counter.enable = false;
+        state = CHARGING;
+    }
+    
+    if (detect == NONE){                    //Charger removed
+        charge_wait_counter.enable = false;
+        state = IDLE;
+    }
+}
+
+void chargeOClockout(void){
+    Set_LED_RGB(0b100); //Red LED
+    if (detect == NONE){    //Stay in charge OC lockout state until charger is disconnected
+        state = IDLE;
+    }
+}
+
+void cellBalance(void){
+    
+}
+
+void outputEN(void){
+    
+}
+
+void dischargeOClockout(void){
+    
+}
+
+void error(void){
+    Set_LED_RGB(0b100); //Red LED
+    if (ISL_RegData[Status] == 0){  //Only go back to idle when all error flags are clear
+        state = IDLE;
+    }
+}
+
+void main(void)
+{
+    init();
     
     while (1)
     {
@@ -256,8 +355,21 @@ void main(void)
             I2C_ERROR_FLAGS = 0;    //Clear error flags
         }
         
+        ISL_ReadAllCellVoltages();
+        ISL_calcCellStats();
+        detect = checkDetect();
+        isl_int_temp = ISL_GetInternalTemp();
+        thermistor_temp = getThermistorTemp(modelnum);
+        ISL_Read_Register(Status);      //Get Status register to check for error flags
+        
+            //TODO: Add I2C error check here
+        
         
         switch(state){
+            case INIT:
+                init();
+                break;
+                
             case SLEEP:
                 sleep();
                 break;
@@ -289,9 +401,27 @@ void main(void)
             case DISCHARGE_OC_LOCKOUT:
                 dischargeOClockout();
                 break;  
+                
+            case ERROR:
+                error();
+                break;
         }
         
+        if (TMR4_HasOverflowOccured()){         //Every 32ms 
+            if (charge_wait_counter.enable){
+                charge_wait_counter.value++;
+            }
+            
+            if (charge_duration_counter.enable){
+                charge_duration_counter.value++;
+            }
+            
+            if (sleep_timeout_counter.enable){
+                sleep_timeout_counter.value++;
+            }
         
+        
+        }
 
 
         

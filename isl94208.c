@@ -6,9 +6,33 @@ static uint8_t _GenerateMask(uint8_t length);
 static uint16_t _ConvertADCtoMV(uint16_t adcval);
 
 void ISL_Init(void){
-    ISL_SetSpecificBits(ISL.ENABLE_FEAT_SET_WRITES, 1);
-    ISL_SetSpecificBits(ISL.WKPOL, 1);
-    ISL_SetSpecificBits(ISL.ENABLE_FEAT_SET_WRITES, 0);
+//    ISL_SetSpecificBits(ISL.ENABLE_FEAT_SET_WRITES, 1);
+//    ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_SET_WRITES, 1);
+//    ISL_SetSpecificBits(ISL.ENABLE_CHARGE_SET_WRITES, 1);
+    ISL_SetSpecificBits((uint8_t[]){WriteEnable, 5, 3}, 0b111);    //Set all three feature set, charge set, and discharge set write bits
+    
+    /* 0 = Auto OC discharge control enabled
+     00 =  100mV OC threshold / 2mOhm shunt = 50A OC trip. Can't set it any lower, even though PCB fuse is 30A.
+     0 = Auto SC discharge control enabled
+     00 = 2mOhm shunt @ 200mV SC threshold = 100A short circuit trip. Can't set any lower.
+     00 = Overcurrent timeout 160ms or 2.5ms if discharge time divider set. Can't set any lower.*/
+    ISL_Write_Register(DischargeSet, 0b00000000);
+    
+    /* 0 = Auto OC charge control enabled
+     00 = 100mV Charge OC threshold @ 100mOhm shunt = 1A limit
+     0 = short circuit timeout of 190us
+     1 = charge OC delay divided by 32,  = 2.5ms
+     1 = discharge OC delay divided by 64 = 2.5ms
+     00 = OC charge timeout 80ms or 2.5ms if charge time divider set 
+     */
+    ISL_Write_Register(ChargeSet, 0b00001100);
+   
+    ISL_SetSpecificBits(ISL.WKPOL, 1);  //Set wake signal to be active high. Trigger pulled > NC switch unpressed > circuit closed > WKUP line pulled high
+    
+    ISL_SetSpecificBits( (uint8_t[]){WriteEnable, 5, 3}, 0b000);    //Clear all three feature set, charge set, and discharge set write bits
+//    ISL_SetSpecificBits(ISL.ENABLE_FEAT_SET_WRITES, 0);
+//    ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_SET_WRITES, 0);
+//    ISL_SetSpecificBits(ISL.ENABLE_CHARGE_SET_WRITES, 0);
 }
 
 uint8_t ISL_Read_Register(isl_reg_t reg){  //Allows easily retrieving an entire register. Ex. ISL_Read_Register(ISL_CONFIG_REG); result = ISL_RegData.Config
@@ -18,6 +42,9 @@ uint8_t ISL_Read_Register(isl_reg_t reg){  //Allows easily retrieving an entire 
 
 void ISL_Write_Register(isl_reg_t reg, uint8_t wrdata){
      I2C_ERROR_FLAGS |= I2C1_WriteMemory(ISL_ADDR, reg, &wrdata, 1);
+     #ifdef __DEBUG
+    ISL_Read_Register(reg);    //Re-read the I2C register so we can confirm any changes by watching variable values in debug.
+    #endif
 }
 
 
@@ -25,7 +52,7 @@ void ISL_Write_Register(isl_reg_t reg, uint8_t wrdata){
 /* Sets specific bit in any register while preserving the other bits
  * When setting more than a single bit, bit_addr must be the location of the LEAST significant bit.
  * Example: A register 0xFF has content 11001111 and you want to set the zeros to ones (you want to set the value 0b11 in bits 5 and 4)
- * You would call ISL_SetSpecificBit((uint8_t {0xFF, 4, 0b11}, 2)
+ * You would call ISL_SetSpecificBit((uint8_t[]){0xFF, 4, 2}, 0b11)
  * Meaning, you want to set the register 0xFF with a target location LSB of 4, a value of binary 11, which has a bit length of 2 bits.
  * This is because the value you are setting is shifted left by bit_addr.
  * Most of the time you'll just use something like ISL_SetSpecificBits(ISL.WKPOL, 1) or ISL_SetSpecificBits(ISL.ANALOG_OUT_SELECT_4bits, 0b0110).

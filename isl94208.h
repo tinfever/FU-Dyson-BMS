@@ -78,12 +78,12 @@ const struct ISL_reg_bits_struct {  //Stores one array for each register setting
     isl_locate_t WKUP_STATUS[3];    //0x00 Config Register
     isl_locate_t PRESENT[3];
     
-    isl_locate_t CHARGE_OC[3];      //0x01 Operating Status Register
-    isl_locate_t DISCHARGE_OC[3];
-    isl_locate_t SHORT_CIRCUIT[3];
-    isl_locate_t LOAD_FAIL[3];
-    isl_locate_t INT_OVER_TEMP[3];
-    isl_locate_t EXP_OVER_TEMP[3];
+    isl_locate_t OC_CHARGE_STATUS[3];      //0x01 Operating Status Register
+    isl_locate_t OC_DISCHARGE_STATUS[3];
+    isl_locate_t SHORT_CIRCUIT_STATUS[3];
+    isl_locate_t LOAD_FAIL_STATUS[3];
+    isl_locate_t INT_OVER_TEMP_STATUS[3];
+    isl_locate_t EXP_OVER_TEMP_STATUS[3];
     
     isl_locate_t CELL_BALANCE_6bits[3]; //0x02 Cell Balance Registers
     
@@ -96,18 +96,18 @@ const struct ISL_reg_bits_struct {  //Stores one array for each register setting
     isl_locate_t VMON_CHECK[3];
     isl_locate_t SLEEP[3];
             
-    isl_locate_t DISCHARGE_OC_TIMEOUT_2bits[3];   //0x05 Discharge Set Register   
+    isl_locate_t OC_DISCHARGE_TIMEOUT_2bits[3];   //0x05 Discharge Set Register   
     isl_locate_t SC_DISCHARGE_THRESH_2bits[3];
-    isl_locate_t AUTO_SC_DISABLE[3];
+    isl_locate_t SC_AUTO_DISABLE[3];
     isl_locate_t OC_DISCHARGE_THRESH_2bits[3];
-    isl_locate_t AUTO_DISCHARGE_OC_DISABLE[3];
+    isl_locate_t OC_DISCHARGE_AUTO_DISABLE[3];
             
-    isl_locate_t CHARGE_OC_TIMEOUT_2bits[3];  //0x06 Charge Set Register
+    isl_locate_t OC_CHARGE_TIMEOUT_2bits[3];  //0x06 Charge Set Register
     isl_locate_t DISCHARGE_TIME_DIV[3];
     isl_locate_t CHARGE_TIME_DIV[3];
     isl_locate_t SC_DELAY_LONG[3];
     isl_locate_t OC_CHARGE_THRESH_2bits[3];
-    isl_locate_t AUTO_CHARGE_OC_DISABLE[3];
+    isl_locate_t OC_CHARGE_AUTO_DISABLE[3];
             
     isl_locate_t WKPOL[3];          //0x07 Feature Set Register
     isl_locate_t DISABLE_WKUP[3];
@@ -127,12 +127,12 @@ const struct ISL_reg_bits_struct {  //Stores one array for each register setting
     .WKUP_STATUS = {0x00, 4, 1},    //0x00 Config Register; Register 0x00, LSB bit 4, bit length 1
     .PRESENT = {0x00, 5, 1},
 
-    .CHARGE_OC = {0x01, 0, 1},      //0x01 Operating Status Register
-    .DISCHARGE_OC = {0x01, 1, 1},
-    .SHORT_CIRCUIT = {0x01, 2, 1},
-    .LOAD_FAIL = {0x01, 3, 1},
-    .INT_OVER_TEMP = {0x01, 4, 1},
-    .EXP_OVER_TEMP = {0x01, 5, 1},
+    .OC_CHARGE_STATUS = {0x01, 0, 1},      //0x01 Operating Status Register
+    .OC_DISCHARGE_STATUS = {0x01, 1, 1},
+    .SHORT_CIRCUIT_STATUS = {0x01, 2, 1},
+    .LOAD_FAIL_STATUS = {0x01, 3, 1},
+    .INT_OVER_TEMP_STATUS = {0x01, 4, 1},
+    .EXP_OVER_TEMP_STATUS = {0x01, 5, 1},
 
     .CELL_BALANCE_6bits = {0x02, 1, 6}, //0x02 Cell Balance Registers; Register 0x02, LSB in position 1, bit length 6
     
@@ -145,18 +145,18 @@ const struct ISL_reg_bits_struct {  //Stores one array for each register setting
     .VMON_CHECK = {0x04, 6, 1},
     .SLEEP = {0x04, 7, 1},
 
-    .DISCHARGE_OC_TIMEOUT_2bits = {0x05, 0, 2},   //0x05 Discharge Set Register, value requires 2 bits     
+    .OC_DISCHARGE_TIMEOUT_2bits = {0x05, 0, 2},   //0x05 Discharge Set Register, value requires 2 bits     
     .SC_DISCHARGE_THRESH_2bits = {0x05, 2, 2},
-    .AUTO_SC_DISABLE = {0x05, 4, 1},
+    .SC_AUTO_DISABLE = {0x05, 4, 1},
     .OC_DISCHARGE_THRESH_2bits = {0x05, 5, 2},
-    .AUTO_DISCHARGE_OC_DISABLE = {0x05, 7, 1},
+    .OC_DISCHARGE_AUTO_DISABLE = {0x05, 7, 1},
 
-    .CHARGE_OC_TIMEOUT_2bits = {0x06, 0, 2},  //0x06 Charge Set Register, value requires 2 bits
+    .OC_CHARGE_TIMEOUT_2bits = {0x06, 0, 2},  //0x06 Charge Set Register, value requires 2 bits
     .DISCHARGE_TIME_DIV = {0x06, 2, 1},
     .CHARGE_TIME_DIV = {0x06, 3, 1},
     .SC_DELAY_LONG  = {0x06, 4, 1},
     .OC_CHARGE_THRESH_2bits = {0x06, 5, 2},
-    .AUTO_CHARGE_OC_DISABLE = {0x06, 7, 1},
+    .OC_CHARGE_AUTO_DISABLE = {0x06, 7, 1},
 
     .WKPOL = {0x07, 0, 1},          //0x07 Feature Set Register
     .DISABLE_WKUP = {0x07, 1, 1},
