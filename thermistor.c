@@ -17,9 +17,9 @@ uint8_t getThermistorTemp (modelnum_t modelnum){
     
     
     
-    //Until we find the index where the voltage at i is less than our read value and the voltage at i+1 is greater than our read value
+    //Until we find the index where the voltage at i is less than or equal to our read value, and the voltage at i+1 is greater than our read value
     //Meaning we found the two index values our read value is between
-    while ( !(ThermistorLUT[modelnum][index][voltage] * 10 <= pic_thermistor) || !(ThermistorLUT[modelnum][index+1][voltage] * 10 > pic_thermistor)  ){    //&& !( (ThermistorLUT[modelnum][index+1][voltage] * 10) > pic_thermistor)
+    while ( !(ThermistorLUT[modelnum][index][voltage] * 10 <= pic_thermistor) || !(ThermistorLUT[modelnum][index+1][voltage] * 10 > pic_thermistor)  ){
         iteration++;
         if (increment >= 2) increment = LUT_SIZE[modelnum]/(1 << iteration); //Keep halving the increment but make sure increment doesn't go to zero. Using bit shift to calculate power of two, diving LUT_SIZE by bit shift so we don't get successive rounding errors by just dividing the previous increment by two
         if (increment < 1) increment = 1;   //Make sure increment can't go below one

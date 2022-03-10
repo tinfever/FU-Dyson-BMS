@@ -35,7 +35,6 @@ enum {
 
 //You could probably save 160 bytes of flash by removing the celsius values and using the array index as the temperature. Just have to add handling for when two temps would have same voltage.
 #define SV09_LUT_SIZE_DEF 93
-uint8_t const SV09_LUT_SIZE = SV09_LUT_SIZE_DEF;
 uint8_t const SV09_thermistor_LUT[SV09_LUT_SIZE_DEF][2] = {
     {45,99},
     {46,98},
@@ -133,7 +132,6 @@ uint8_t const SV09_thermistor_LUT[SV09_LUT_SIZE_DEF][2] = {
 };
 
 #define SV11_LUT_SIZE_DEF 84
-uint8_t const SV11_LUT_SIZE = SV09_LUT_SIZE_DEF;
 uint8_t const SV11_thermistor_LUT[SV11_LUT_SIZE_DEF][2] = {
     {13,99},
     {14,97},
@@ -221,7 +219,7 @@ uint8_t const SV11_thermistor_LUT[SV11_LUT_SIZE_DEF][2] = {
     {182,0}
 };
 
-const uint8_t LUT_SIZE[NUM_OF_MODELS] = {
+const modelnum_t LUT_SIZE[NUM_OF_MODELS] = {       //This works because the indexes in this array align with the enum modelnum_t from main.h
     SV09_LUT_SIZE_DEF,
     SV11_LUT_SIZE_DEF,
 };

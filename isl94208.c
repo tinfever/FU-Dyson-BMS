@@ -122,7 +122,7 @@ int16_t ISL_GetInternalTemp(void){
 }
 
 static uint16_t _ConvertADCtoMV(uint16_t adcval){
-    return (uint16_t) ((uint32_t)adcval * 2500 / 1024);
+    return (uint16_t) ((uint32_t)adcval * VREF_VOLTAGE_mV / 1024);
 }
 
 static uint8_t _GenerateMask(uint8_t length){   //Generates a given number of ones in binary. Ex. input 5 = output 0b11111

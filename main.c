@@ -113,7 +113,7 @@ void ClearI2CBus(){
 }
 
 uint16_t static ConvertADCtoMV(uint16_t adcval){                //I included this function here and in isl94208 so that it could stand alone if needed. There is probably a better way to do this.
-    return (uint16_t) ((uint32_t)adcval * 2500 / 1024);
+    return (uint16_t) ((uint32_t)adcval * VREF_VOLTAGE_mV / 1024);
 }
 
 void ADCPrepare(void){
@@ -130,15 +130,15 @@ uint16_t readADCmV(adc_channel_t channel){        //Adds routine to switch to DA
 uint16_t dischargeIsense_mA(void){
     ADCPrepare();
     uint16_t adcval = ADC_GetConversion(ADC_DISCHARGE_ISENSE);
-    return (uint16_t) ((uint32_t)adcval * 2500 * 1000 / 1024 / 2);  //This better maintains precision by doing the multiplication for 2500mV VREF and 1000mA/A in one step as a uint32_t. Then we divide by 1024 ADC steps and the 2mOhm shunt resistor.
+    return (uint16_t) ((uint32_t)adcval * VREF_VOLTAGE_mV * 1000 / 1024 / 2);  //This better maintains precision by doing the multiplication for 2500mV VREF and 1000mA/A in one step as a uint32_t. Then we divide by 1024 ADC steps and the 2mOhm shunt resistor.
 }
 
 detect_t checkDetect(void){
     uint16_t result = readADCmV(ADC_CHRG_TRIG_DETECT);
-    if (result > 2000){
+    if (result > DETECT_CHARGER_THRESH_mV){
         return CHARGER;
     }
-    else if (result < 2000 && result > 400){
+    else if (result < DETECT_CHARGER_THRESH_mV && result > DETECT_TRIGGER_THRESH_mV){
         return TRIGGER;
     }
     else{
@@ -183,8 +183,8 @@ void init(void){
     TRISA7 = 0; //Set redLED as output
     ANSB3 = 0; //Set Green LED as digital. Red and Blue are always digital.
 
-    /* Immediately start green LED so we know board is alive */
-    Set_LED_RGB(0b010);
+    /* Immediately start yellow LED so we know board is alive */
+    Set_LED_RGB(0b110);
 
     //* Set up I2C pins */
     TRIS_SDA = 1;     //SDA - Make sure both pins are inputs
@@ -211,35 +211,42 @@ void idle(void){
     Set_LED_RGB(0b010); //LED Green
     //TODO: Add I2C error check here
     
-    if (detect == TRIGGER){
-        sleep_timeout_counter.enable = false;   //We aren't going to be sleeping soon
-        sleep_timeout_counter.value = 0;
+    if (detect == TRIGGER                       //Trigger is pulled
+        && cellstats.mincell_mV > MIN_DISCHARGE_CELL_VOLTAGE_mV          //Min cell is not below low voltage cut out of 3V
+        && isl_int_temp < MAX_CHARGE_TEMP_C     //Temps are OK
+        && thermistor_temp < MAX_CHARGE_TEMP_C
+        && ISL_GetSpecificBits(ISL.WKUP_STATUS) //Make sure WKUP = 1 meaning charger connected or trigger pressed
+        && ISL_RegData[Status] == 0){           //No errors
+            sleep_timeout_counter.enable = false;   //We aren't going to be sleeping soon
+            state = OUTPUT_EN;
     }
-    
-    if (detect == CHARGER                       //Charger is connected
+    else if (detect == CHARGER                       //Charger is connected
         && charge_complete_flag == false         //We haven't already done a complete charge cycle
-        && cellstats.maxcell_mV < 4200          //Max cell < 4.20V
+        && cellstats.maxcell_mV < MAX_CHARGE_CELL_VOLTAGE_mV          //Max cell < 4.20V
         && isl_int_temp < MAX_CHARGE_TEMP_C     //Make sure temps are OK
         && thermistor_temp < MAX_CHARGE_TEMP_C
-        && ISL_GetSpecificBits(ISL.WKUP_STATUS) //Make sure WKUP = 1 meaning charger connected or trigger presse
+        && ISL_GetSpecificBits(ISL.WKUP_STATUS) //Make sure WKUP = 1 meaning charger connected or trigger pressed
         && ISL_RegData[Status] == 0){           //Verify no status error flags
-        sleep_timeout_counter.enable = false;   //We aren't going to be sleeping soon
-        sleep_timeout_counter.value = 0;
-        state = CHARGING; 
+            sleep_timeout_counter.enable = false;   //We aren't going to be sleeping soon
+            state = CHARGING; 
+    }
+    else if (ISL_RegData[Status] != 0){  //Somehow there was an error
+        sleep_timeout_counter.enable = false;
+        state = ERROR;
+        //TODO: add checking for other error types. Make sure to add exit methods to error state function as well.
     }
     
-    if (charge_complete_flag == true && cellstats.maxcell_mV < 4100){      //If the max cell voltage is below 4100mV and the pack is marked as fully charged, unmark it as charged.
+    if ( (charge_complete_flag == true && cellstats.maxcell_mV < 4100) || (detect != CHARGER)){      //If the max cell voltage is below 4100mV and the pack is marked as fully charged, unmark it as charged. Also, if removed from charger, clear charge complete flag.
         charge_complete_flag = false;
     }
     
-    if (detect == NONE && ISL_GetSpecificBits(ISL.WKUP_STATUS) == 0 && sleep_timeout_counter.enable == false){
+    if (detect == NONE && ISL_GetSpecificBits(ISL.WKUP_STATUS) == 0 && sleep_timeout_counter.enable == false){  //Start sleep counter if nothing is connected and it isn't already running
         sleep_timeout_counter.value = 0;
         sleep_timeout_counter.enable = true;
     }
     
-    if (sleep_timeout_counter.value >  156 && detect != CHARGER && sleep_timeout_counter.enable == true){    //938*32ms = 30.016s //If we are in IDLE state for 30 seconds and not on the charger, go to sleep. We will stay awake on the charger since we have power to spare and can then make sure battery voltages don't drop over time.
+    if (sleep_timeout_counter.value >  IDLE_SLEEP_TIMEOUT && sleep_timeout_counter.enable == true){    //938*32ms = 30.016s //If we are in IDLE state for 30 seconds and not on the charger, go to sleep. We will stay awake on the charger since we have power to spare and can then make sure battery voltages don't drop over time.
         sleep_timeout_counter.enable = false;
-        sleep_timeout_counter.value = 0;
         state = SLEEP;
     }
     
@@ -250,7 +257,7 @@ void charging(void){
 
     if (!ISL_GetSpecificBits(ISL.ENABLE_CHARGE_FET)     //if we aren't already charging
         && detect == CHARGER
-        && cellstats.maxcell_mV < 4200
+        && cellstats.maxcell_mV < MAX_CHARGE_CELL_VOLTAGE_mV
         && isl_int_temp < MAX_CHARGE_TEMP_C
         && thermistor_temp < MAX_CHARGE_TEMP_C
         && ISL_GetSpecificBits(ISL.WKUP_STATUS)
@@ -263,23 +270,21 @@ void charging(void){
     }
     else if (ISL_GetSpecificBits(ISL.ENABLE_CHARGE_FET)     //same as above but we are already charging and all conditions are good
         && detect == CHARGER
-        && cellstats.maxcell_mV < 4200
+        && cellstats.maxcell_mV < MAX_CHARGE_CELL_VOLTAGE_mV
         && isl_int_temp < MAX_CHARGE_TEMP_C
         && thermistor_temp < MAX_CHARGE_TEMP_C
         && ISL_GetSpecificBits(ISL.WKUP_STATUS)
         && ISL_RegData[Status] == 0){
         //do nothing
     }
-    else if (cellstats.maxcell_mV >= 4200){         //Target voltage reached
+    else if (cellstats.maxcell_mV >= MAX_CHARGE_CELL_VOLTAGE_mV){         //Target voltage reached
         ISL_SetSpecificBits(ISL.ENABLE_CHARGE_FET, 0); //Disable Charging
         charge_duration_counter.enable = false;         //Stop charge timer
-        if (charge_duration_counter.value < 313){   //313 * 32ms = 10.016s, if it took less than 10 seconds for max cell voltage to be > 4.20v, mark charge complete
+        if (charge_duration_counter.value < CHARGE_COMPELTE_TIMEOUT){   //313 * 32ms = 10.016s, if it took less than 10 seconds for max cell voltage to be > 4.20v, mark charge complete
             charge_complete_flag = true;
             state = IDLE;
         }
         else{       //Go to charge wait state and wait 70 seconds before starting next charge cycle
-            charge_wait_counter.value = 0;
-            charge_wait_counter.enable = true;  //Clear and start charge wait counter
             state = CHARGING_WAIT;
         }
     }
@@ -305,7 +310,12 @@ void charging(void){
 
 void chargingWait(void){
     Set_LED_RGB(0b001); //Blue LED
-    if (charge_wait_counter.value >= 2188){         //2188 * 32ms = 70.016 seconds
+    if (!charge_wait_counter.enable){   //if counter isn't enabled, clear and enable it.
+        charge_wait_counter.value = 0;
+        charge_wait_counter.enable = true;  //Clear and start charge wait counter
+    }
+    
+    if (charge_wait_counter.value >= CHARGE_WAIT_TIMEOUT){         //2188 * 32ms = 70.016 seconds
         charge_wait_counter.enable = false;
         state = CHARGING;
     }
@@ -314,6 +324,12 @@ void chargingWait(void){
         charge_wait_counter.enable = false;
         state = IDLE;
     }
+    
+    if (ISL_RegData[Status] != 0){  //Somehow there was an error
+        charge_wait_counter.enable = false;
+        state = ERROR;
+    }
+    
 }
 
 void chargeOClockout(void){
@@ -328,18 +344,81 @@ void cellBalance(void){
 }
 
 void outputEN(void){
-    
+        if (!ISL_GetSpecificBits(ISL.ENABLE_DISCHARGE_FET)  //If discharge isn't already enabled
+            && detect == TRIGGER                       //Trigger is pulled
+            && cellstats.mincell_mV > MIN_DISCHARGE_CELL_VOLTAGE_mV          //Min cell is not below low voltage cut out of 3V
+            && isl_int_temp < MAX_CHARGE_TEMP_C     //Temps are OK
+            && thermistor_temp < MAX_CHARGE_TEMP_C
+            && ISL_GetSpecificBits(ISL.WKUP_STATUS) //Make sure WKUP = 1 meaning charger connected or trigger pressed
+            && ISL_RegData[Status] == 0 //No errors
+            && discharge_current_mA < MAX_DISCHARGE_CURRENT_mA){     //We aren't discharging more than 30A
+                Set_LED_RGB(0b111); //White LED
+                ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 1);
+        }
+        else if (ISL_GetSpecificBits(ISL.ENABLE_DISCHARGE_FET)  //Same as above but we are already discharging and all conditions are good
+            && detect == TRIGGER
+            && cellstats.mincell_mV > MIN_DISCHARGE_CELL_VOLTAGE_mV 
+            && isl_int_temp < MAX_CHARGE_TEMP_C
+            && thermistor_temp < MAX_CHARGE_TEMP_C
+            && ISL_GetSpecificBits(ISL.WKUP_STATUS)
+            && ISL_RegData[Status] == 0
+            && discharge_current_mA < MAX_DISCHARGE_CURRENT_mA){
+                //do nothing
+        }
+        else if (discharge_current_mA >= MAX_DISCHARGE_CURRENT_mA              //Discharge current is too high
+            || ISL_RegData[Status] & 0b00000110){       //ISL sets discharge OC or short circuit flag
+                ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);   //Disable discharging
+                state = DISCHARGE_OC_LOCKOUT;
+        }
+        else {                                                  //Trigger released; cell voltage too low; over temp; WKUP status = 1; any other ISL error flag
+            ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);   //Disable discharging
+            state = IDLE;
+        }
+        
+        
 }
 
 void dischargeOClockout(void){
-    
+    Set_LED_RGB(0b100); //Red LED
+    ISL_Write_Register(FETControl, 0b01000000); //Enable output load monitoring so we can tell when load is removed, also make sure charge and discharge FETs are off
+    if (detect != TRIGGER                                      //Trigger isn't pulled
+        && ISL_GetSpecificBits(ISL.LOAD_FAIL_STATUS) == 0     //Load is confirmed removed
+        && discharge_current_mA == 0){                     //Definitely no discharge current  
+            state = IDLE;
+            ISL_SetSpecificBits(ISL.VMON_CHECK, 0); //Turn off output load monitoring
+    }
 }
 
 void error(void){
+    //TODO: I should probably add a flag that gets set to specify the type of error encountered. Then we can reference that flag to have an error-specific LED indicator action.
+    //Should we just roll all error/lockout states in to this function that will check all possible errors and respond appropriately?
+    ISL_SetSpecificBits(ISL.ENABLE_CHARGE_FET, 0);  //Immediately double-check that charge and discharge fets are disabled.
+    ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);
     Set_LED_RGB(0b100); //Red LED
     if (ISL_RegData[Status] == 0){  //Only go back to idle when all error flags are clear
         state = IDLE;
     }
+    
+    if (sleep_timeout_counter.enable == false){  //If there is an error, start counter (if it isn't already started) before we just go to sleep
+        sleep_timeout_counter.value = 0;
+        sleep_timeout_counter.enable = true;
+    }
+    
+    if (sleep_timeout_counter.value >  ERROR_SLEEP_TIMEOUT && sleep_timeout_counter.enable == true){    //1876*32ms = 60.032s //If we are in ERROR state for 60 seconds, just go to sleep.
+        sleep_timeout_counter.enable = false;
+        state = SLEEP;
+    }
+    
+}
+
+void idleWaitTriggerRelease(void){
+    ISL_SetSpecificBits(ISL.ENABLE_CHARGE_FET, 0);      //Probably unnecessary. Make sure FETs are off in this state.
+    ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);
+    Set_LED_RGB(0b110); //Yellow LED
+    if (detect != TRIGGER){
+        state = IDLE;
+    }
+    
 }
 
 void main(void)
@@ -361,9 +440,11 @@ void main(void)
         isl_int_temp = ISL_GetInternalTemp();
         thermistor_temp = getThermistorTemp(modelnum);
         ISL_Read_Register(Status);      //Get Status register to check for error flags
+        discharge_current_mA = dischargeIsense_mA();
         
             //TODO: Add I2C error check here
         
+        //It might make sense to handle all error handling state changes here separately. That could cause a timer started in one of the states to not be disabled as expected though.
         
         switch(state){
             case INIT:
@@ -404,6 +485,10 @@ void main(void)
                 
             case ERROR:
                 error();
+                break;
+                
+            case IDLE_WAIT_TRIGGER_RELEASE:
+                idleWaitTriggerRelease();
                 break;
         }
         

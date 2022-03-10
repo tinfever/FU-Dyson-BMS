@@ -22,6 +22,7 @@ enum {
     OUTPUT_EN,
     DISCHARGE_OC_LOCKOUT,
     ERROR,
+    IDLE_WAIT_TRIGGER_RELEASE,
 } state;
 
 typedef enum{
@@ -44,6 +45,7 @@ int16_t volatile isl_int_temp;
 uint8_t volatile thermistor_temp;
 uint16_t charge_wait_timer = 0;
 bool charge_complete_flag = false;
+uint16_t discharge_current_mA = 0;
 
 typedef struct {
     uint16_t value;
