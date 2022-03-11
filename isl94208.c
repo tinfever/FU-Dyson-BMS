@@ -35,7 +35,7 @@ void ISL_Init(void){
 //    ISL_SetSpecificBits(ISL.ENABLE_CHARGE_SET_WRITES, 0);
 }
 
-uint8_t ISL_Read_Register(isl_reg_t reg){  //Allows easily retrieving an entire register. Ex. ISL_Read_Register(ISL_CONFIG_REG); result = ISL_RegData.Config
+uint8_t ISL_Read_Register(isl_reg_t reg){  //Allows easily retrieving an entire register. Ex. ISL_Read_Register(ISL_CONFIG_REG); result = ISL_RegData[Config]
     I2C_ERROR_FLAGS |= I2C1_ReadMemory(ISL_ADDR, reg, &ISL_RegData[reg], 1);
     return ISL_RegData[reg];
 }
@@ -75,6 +75,13 @@ uint8_t ISL_GetSpecificBits(const isl_locate_t params[3]){
     return (ISL_Read_Register(reg_addr) >> bit_addr) & _GenerateMask(bit_length); //Shift register containing data to the right until we reach the LSB of what we want, then bitwise AND to discard anything longer than the bit length
 }
 
+uint8_t ISL_GetSpecificBits_cached(const isl_locate_t params[3]){     //Can be used like "ISL_GetSpecificBits_cached(ISL.WKUP_STATUS, ISL_RegData[status])
+    uint8_t reg_addr = params[REG_ADDRESS];
+    uint8_t bit_addr = params[BIT_ADDRESS];
+    uint8_t bit_length = params[BIT_LENGTH];
+    return (ISL_RegData[reg_addr] >> bit_addr) & _GenerateMask(bit_length); //Shift register containing data to the right until we reach the LSB of what we want, then bitwise AND to discard anything longer than the bit length
+}
+
 uint16_t ISL_GetAnalogOutmV(isl_analogout_t value){
     DAC_SetOutput(0);   //Make sure DAC is set to 0V
     ADC_SelectChannel(ADC_PIC_DAC); //Connect ADC to 0V to empty internal ADC sample/hold capacitor
@@ -88,7 +95,7 @@ uint16_t ISL_GetAnalogOutmV(isl_analogout_t value){
 }
 
 void ISL_ReadAllCellVoltages(void){
-    CellVoltages[1] = ISL_GetAnalogOutmV(AO_VCELL1)*2; //Cell voltages have  to be multiplied by two since ISL scales them down by two.
+    CellVoltages[1] = ISL_GetAnalogOutmV(AO_VCELL1)*2; //Cell voltages have to be multiplied by two since ISL scales them down by two.
     CellVoltages[2] = ISL_GetAnalogOutmV(AO_VCELL2)*2;
     CellVoltages[3] = ISL_GetAnalogOutmV(AO_VCELL3)*2;
     CellVoltages[4] = ISL_GetAnalogOutmV(AO_VCELL4)*2;

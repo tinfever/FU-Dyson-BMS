@@ -44,14 +44,16 @@
 const uint16_t VREF_VOLTAGE_mV = 2500;
 
 const uint8_t MAX_CHARGE_TEMP_C = 50;           //Celsius
-const uint8_t MAX_DISCHARGE_TEMP_C = 60;        //Celsius
+const uint8_t MAX_DISCHARGE_TEMP_C = 30;        //Celsius
 const uint16_t MAX_DISCHARGE_CURRENT_mA = 30000;
 const uint16_t MIN_DISCHARGE_CELL_VOLTAGE_mV = 3000;
 const uint16_t MAX_CHARGE_CELL_VOLTAGE_mV = 4200;
+const uint16_t PACK_CHARGE_NOT_COMPLETE_THRESH_mV = 4100;
 
 const uint16_t DETECT_CHARGER_THRESH_mV = 2000;
 const uint16_t DETECT_TRIGGER_THRESH_mV = 400;
 
+const uint8_t HYSTERESIS_TEMP_C = 3;
 
 /* Mark charge complete if a charging cycle takes less than this amount of time.
 313 * 32ms = 10.016s, if it took less than 10 seconds for max cell voltage to be > 4.20v, mark charge complete */

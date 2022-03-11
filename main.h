@@ -10,6 +10,9 @@
 
 #include "mcc_generated_files/adc.h"
 
+#ifdef __INTELLISENSE__     //Make it so VSCode doesn't complain about what a "__bit" is.
+#define __bit bool
+#endif
 
 enum {
     INIT = 0,
@@ -17,12 +20,12 @@ enum {
     IDLE,
     CHARGING,
     CHARGING_WAIT,
-    CHARGE_OC_LOCKOUT,
+    //CHARGE_OC_LOCKOUT,
     CELL_BALANCE,
     OUTPUT_EN,
-    DISCHARGE_OC_LOCKOUT,
+    //DISCHARGE_OC_LOCKOUT,
     ERROR,
-    IDLE_WAIT_TRIGGER_RELEASE,
+    //IDLE_WAIT_TRIGGER_RELEASE,
 } state;
 
 typedef enum{
@@ -45,6 +48,7 @@ int16_t volatile isl_int_temp;
 uint8_t volatile thermistor_temp;
 uint16_t charge_wait_timer = 0;
 bool charge_complete_flag = false;
+bool full_discharge_flag = false;
 uint16_t discharge_current_mA = 0;
 
 typedef struct {

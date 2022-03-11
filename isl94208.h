@@ -209,6 +209,7 @@ uint8_t ISL_Read_Register(isl_reg_t reg);
 void ISL_Write_Register(isl_reg_t reg, uint8_t wrdata);
 void ISL_SetSpecificBits(const isl_locate_t params[3], uint8_t value);
 uint8_t ISL_GetSpecificBits(const isl_locate_t params[3]);
+uint8_t ISL_GetSpecificBits_cached(const isl_locate_t params[3]);
 uint16_t ISL_GetAnalogOutmV(isl_analogout_t value);
 void ISL_ReadAllCellVoltages(void);
 int16_t ISL_GetInternalTemp(void);
