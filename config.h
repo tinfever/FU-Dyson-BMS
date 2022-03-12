@@ -44,7 +44,7 @@
 const uint16_t VREF_VOLTAGE_mV = 2500;
 
 const uint8_t MAX_CHARGE_TEMP_C = 50;           //Celsius
-const uint8_t MAX_DISCHARGE_TEMP_C = 30;        //Celsius
+const uint8_t MAX_DISCHARGE_TEMP_C = 35;        //Celsius
 const uint16_t MAX_DISCHARGE_CURRENT_mA = 30000;
 const uint16_t MIN_DISCHARGE_CELL_VOLTAGE_mV = 3000;
 const uint16_t MAX_CHARGE_CELL_VOLTAGE_mV = 4200;

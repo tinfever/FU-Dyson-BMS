@@ -9,8 +9,12 @@ void ISL_Init(void){
 //    ISL_SetSpecificBits(ISL.ENABLE_FEAT_SET_WRITES, 1);
 //    ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_SET_WRITES, 1);
 //    ISL_SetSpecificBits(ISL.ENABLE_CHARGE_SET_WRITES, 1);
-    ISL_SetSpecificBits((uint8_t[]){WriteEnable, 5, 3}, 0b111);    //Set all three feature set, charge set, and discharge set write bits
     
+    
+    ISL_SetSpecificBits((uint8_t[]){WriteEnable, 5, 3}, 0b111);    //Set all three feature set, charge set, and discharge set write bits
+    ISL_SetSpecificBits(ISL.FORCE_POR, 1);                          //Make sure the ISL is clean reset
+    __delay_ms(5);      //Wait for things to settle. This isn't in the datasheet but if you send I2C write too soon after POR, the writes won't happen.
+    ISL_SetSpecificBits((uint8_t[]){WriteEnable, 5, 3}, 0b111);     //We likely need to enable register writes again
     /* 0 = Auto OC discharge control enabled
      00 =  100mV OC threshold / 2mOhm shunt = 50A OC trip. Can't set it any lower, even though PCB fuse is 30A.
      0 = Auto SC discharge control enabled
@@ -28,7 +32,6 @@ void ISL_Init(void){
     ISL_Write_Register(ChargeSet, 0b00001100);
    
     ISL_SetSpecificBits(ISL.WKPOL, 1);  //Set wake signal to be active high. Trigger pulled > NC switch unpressed > circuit closed > WKUP line pulled high
-    
     ISL_SetSpecificBits( (uint8_t[]){WriteEnable, 5, 3}, 0b000);    //Clear all three feature set, charge set, and discharge set write bits
 //    ISL_SetSpecificBits(ISL.ENABLE_FEAT_SET_WRITES, 0);
 //    ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_SET_WRITES, 0);

@@ -171,6 +171,9 @@ bool safetyChecks (void){
     result &= (ISL_RegData[Status] == 0);               //No ISL error flags
     result &= (discharge_current_mA < MAX_DISCHARGE_CURRENT_mA);     //We aren't discharging more than 30A
     
+    if (!result && state != ERROR){         //Makes sure we don't write new errors in to past_error_reason while we are in the error state
+        setErrorReasonFlags(&past_error_reason, PAST);
+    }
     
     return result;
 }
@@ -184,7 +187,80 @@ bool maxCellOK(void){
 }
 
 bool chargeTempCheck(void){
-    return (isl_int_temp < MAX_CHARGE_TEMP_C && thermistor_temp < MAX_CHARGE_TEMP_C);
+    bool result = (isl_int_temp < MAX_CHARGE_TEMP_C && thermistor_temp < MAX_CHARGE_TEMP_C);
+    if (!result && state != ERROR){
+        setErrorReasonFlags(&past_error_reason, PAST);
+    }
+    return result;
+}
+
+
+/* Most of the time the result of this function call will be stored in past_error_reason so that once we are in the actual error state, we still have a record of why we got there.
+ * Once we are in the error state, we will repeatedly clear current_error_reason and store the result of this function in it so we can see the actual reason we haven't left the error state yet.
+ * We were previously assuming that if we entered the error state and saw that the charger was connected and we were over the charge temp limit, that must be the reason for entry.
+ * Thus, we had a flag that wouldn't let us leave the error state until we'd actually met the lower charge temp limit requirements.
+ * Now that we are actually recording the reason for an error when it occurs, before any resolution has been taken,
+ *  we can check that actual data to determine if we should be using the stricter charging temp limits.
+ */
+void setErrorReasonFlags(volatile error_reason_t *datastore, spacetime_position_t timeframe){
+    
+    bool charge_fault_check = false;
+    if (timeframe == PRESENT && (past_error_reason & CHRG_PRESENT)){
+        charge_fault_check = true;
+    }
+    
+        //Set error reason indicator
+    if (ISL_GetSpecificBits_cached(ISL.INT_OVER_TEMP_STATUS)){
+        *datastore |= ISL_INT_OVERTEMP_FLAG;}
+    if (ISL_GetSpecificBits_cached(ISL.EXT_OVER_TEMP_STATUS)){
+        *datastore |= ISL_EXT_OVERTEMP_FLAG;}
+    if (ISL_GetSpecificBits_cached(ISL.LOAD_FAIL_STATUS)){
+        *datastore |= LOAD_PRESENT_FLAG;}
+    if (ISL_GetSpecificBits_cached(ISL.SHORT_CIRCUIT_STATUS)){
+        *datastore |= DISCHARGE_SC_FLAG;}
+    if (ISL_GetSpecificBits_cached(ISL.OC_DISCHARGE_STATUS)){
+        *datastore |= DISCHARGE_OC_FLAG;}
+    if (ISL_GetSpecificBits_cached(ISL.OC_CHARGE_STATUS)){
+        *datastore |= CHARGE_OC_FLAG;}
+    
+    if (detect == TRIGGER){
+        *datastore |= TRIG_PRESENT;}
+    if (detect == CHARGER){
+        *datastore |= CHRG_PRESENT;}
+    
+    if (timeframe == PAST){                             //PAST means we are storing the data of an error state at the time of encounter so we can access it in the future. Hysteresis doesn't cause us to enter the error state so we don't check it. We can also just check the current state we are in to determine if we need to use charging temp limits.
+        if (!(isl_int_temp < MAX_DISCHARGE_TEMP_C)){
+            *datastore |= ISL_INT_OVERTEMP_PICREAD;}
+        if (!(thermistor_temp < MAX_DISCHARGE_TEMP_C)){
+            *datastore |= THERMISTOR_OVERTEMP_PICREAD;}
+        if (state == CHARGING && !(isl_int_temp < MAX_CHARGE_TEMP_C)){    //Stricter charging temp limits
+            *datastore |= CHARGE_ISL_OVERTEMP_PICREAD;}
+        if (state == CHARGING && !(thermistor_temp < MAX_CHARGE_TEMP_C)){    //Stricter charging temp limits
+           *datastore |= CHARGE_THERMISTOR_OVERTEMP_PICREAD;}
+    }
+    else if (timeframe == PRESENT){                     //PRESENT means we want to access the current reason we haven't left the error state. This only gets called from within the error state.
+        if (!(isl_int_temp < MAX_DISCHARGE_TEMP_C)){
+        *datastore |= ISL_INT_OVERTEMP_PICREAD;}
+        else if (!(isl_int_temp + HYSTERESIS_TEMP_C < MAX_DISCHARGE_TEMP_C)){       //If we aren't in violation of the main over temp rule, see if we might still be in error due to hysteresis range, but don't do both
+            *datastore |= TEMP_HYSTERESIS;}
+        if (!(thermistor_temp < MAX_DISCHARGE_TEMP_C)){
+            *datastore |= THERMISTOR_OVERTEMP_PICREAD;}
+        else if (!(thermistor_temp + HYSTERESIS_TEMP_C < MAX_DISCHARGE_TEMP_C)){
+            *datastore |= TEMP_HYSTERESIS;}
+        if (charge_fault_check && !(isl_int_temp < MAX_CHARGE_TEMP_C)){    //Stricter charging temp limits
+            *datastore |= CHARGE_ISL_OVERTEMP_PICREAD;}
+        else if (charge_fault_check && !(isl_int_temp + HYSTERESIS_TEMP_C < MAX_CHARGE_TEMP_C)){      //need to rethink charging check given this function is used for past and present error checking
+            *datastore |= TEMP_HYSTERESIS;}
+        if (charge_fault_check && !(thermistor_temp < MAX_CHARGE_TEMP_C)){    //Stricter charging temp limits
+           *datastore |= CHARGE_THERMISTOR_OVERTEMP_PICREAD;}
+        else if (charge_fault_check && !(thermistor_temp + HYSTERESIS_TEMP_C < MAX_CHARGE_TEMP_C)){      
+            *datastore |= TEMP_HYSTERESIS;}  
+    }
+
+    
+    if (!(discharge_current_mA < MAX_DISCHARGE_CURRENT_mA)){
+        *datastore |= DISCHARGE_OC_SHUNT_PICREAD;}
+    
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -224,6 +300,7 @@ void init(void){
         __debug_break();
         ClearI2CBus();
     }
+    
     ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);       //Make sure the pack is turned off in case we had some weird reset
     ISL_SetSpecificBits(ISL.ENABLE_CHARGE_FET, 0);
     modelnum = checkModelNum();
@@ -325,12 +402,6 @@ void charging(void){
         ISL_SetSpecificBits(ISL.ENABLE_CHARGE_FET, 0); //Disable Charging
         charge_duration_counter.enable = false;         //Stop charge timer
         state = ERROR;
-//        if (ISL_RegData[Status] & 0b1){     //Error was charge overcurrent flag
-//            state = CHARGE_OC_LOCKOUT; 
-//        }
-//        else{   //It must be either an int over-temp, ext over-temp, discharge SC/OC error (discharge shouldn't be possible though)
-//            state = ERROR;
-//        }
     }
     else{                                   //charger removed
         ISL_SetSpecificBits(ISL.ENABLE_CHARGE_FET, 0); //Disable Charging
@@ -363,13 +434,6 @@ void chargingWait(void){
     }
     
 }
-//
-//void chargeOClockout(void){
-//    Set_LED_RGB(0b100); //Red LED
-//    if (detect == NONE){    //Stay in charge OC lockout state until charger is disconnected
-//        state = IDLE;
-//    }
-//}
 
 void cellBalance(void){
     
@@ -408,50 +472,53 @@ void outputEN(void){
         }
 }
 
-//void dischargeOClockout(void){
-//    Set_LED_RGB(0b100); //Red LED
-//    ISL_Write_Register(FETControl, 0b01000000); //Enable output load monitoring so we can tell when load is removed, also make sure charge and discharge FETs are off
-//    if (detect != TRIGGER                                      //Trigger isn't pulled
-//        && ISL_GetSpecificBits_cached(ISL.LOAD_FAIL_STATUS) == 0     //Load is confirmed removed
-//        && discharge_current_mA == 0){                     //Definitely no discharge current  
-//            state = IDLE;
-//            ISL_SetSpecificBits(ISL.VMON_CHECK, 0); //Turn off output load monitoring
-//    }
-//}
-
 void error(void){
     //TODO: I should probably add a flag that gets set to specify the type of error encountered. Then we can reference that flag to have an error-specific LED indicator action.
     //TODO: Add a write to EEPROM with error info for logging
 
-    //Load mon may not work because the only thing controlling the load is the MOSFET. The load is technically always on.
+    //Load mon may not work because the only thing controlling the load (vacuum) is the MOSFET. The load is technically always on.
     Set_LED_RGB(0b100); //Red LED
     ISL_Write_Register(FETControl, 0b01000000); //Enable output load monitoring so we can tell when load is removed (bit 6), also make sure charge and discharge FETs are off (bits 1 and 0))
     
-    static bool chargeTempCheckOK = true;
+    static bool charge_fault = false;
+    
+    if ( (past_error_reason & CHRG_PRESENT) ){       //past_error_reason will contain reason for entry in to error state. If the charger was present when error occured, we need to use stricter charging temp limits
+        charge_fault = true;
+    }
+    
+    current_error_reason = 0;
+    setErrorReasonFlags(&current_error_reason, PRESENT);
+    
+    //Right now, every time safetyChecks or chargeTempCheck is run, even when in an error state, the past_error_reason will be written to. This isn't terrible because we don't clear past_error_reason, but it would be errors that occur after the initial error would be recorded as having also occured in the initial error.
     
     if (detect == NONE                                                  //Trigger or charger is removed
         && safetyChecks()                                           //All faults have recovered
         && ISL_GetSpecificBits_cached(ISL.LOAD_FAIL_STATUS) == 0
         && discharge_current_mA == 0
-        && chargeTempCheckOK                                        //Since we haven't implement a way to determine if the error occured while charging
+        && !charge_fault                                        //Since we haven't implement a way to determine if the error occured while charging
         && isl_int_temp + HYSTERESIS_TEMP_C < MAX_DISCHARGE_TEMP_C        //Adding a few degrees of hysteresis before exiting from error state
         && thermistor_temp + HYSTERESIS_TEMP_C < MAX_DISCHARGE_TEMP_C
             ){
             ISL_SetSpecificBits(ISL.VMON_CHECK, 0); //Turn off output load monitoring
             sleep_timeout_counter.enable = false;
+            past_error_reason = 0;    //Clear error reason value for future usage
+            current_error_reason = 0;
             state = IDLE;
     }
     
-    if (detect == CHARGER && !chargeTempCheck()){           //If the error occured while we were on the charger and we are also over the lower charge temp limit, set this flag so the error state can't exit until the charge temp is OK. We don't care about the charge temp limit if we weren't on the charger though.
-        chargeTempCheckOK = false;
-    }
-    else if (chargeTempCheck()
-            && isl_int_temp + HYSTERESIS_TEMP_C < MAX_CHARGE_TEMP_C         //Adding a few degrees of hysteresis before exiting from error state
-            && thermistor_temp + HYSTERESIS_TEMP_C < MAX_CHARGE_TEMP_C
-            ){
-        chargeTempCheckOK = true;
+    
+    
+    if (charge_fault
+        && isl_int_temp + HYSTERESIS_TEMP_C < MAX_CHARGE_TEMP_C         //Adding a few degrees of hysteresis before exiting from error state
+        && thermistor_temp + HYSTERESIS_TEMP_C < MAX_CHARGE_TEMP_C
+        ){
+            charge_fault = false;
     }
 
+    
+    
+    
+    
     if (sleep_timeout_counter.enable == false){  //If there is an error, start sleep counter (if it isn't already started), so we sleep if in error state for too long
         sleep_timeout_counter.value = 0;
         sleep_timeout_counter.enable = true;
@@ -463,16 +530,6 @@ void error(void){
     }
     
 }
-
-//void idleWaitTriggerRelease(void){
-//    ISL_SetSpecificBits(ISL.ENABLE_CHARGE_FET, 0);      //Probably unnecessary. Make sure FETs are off in this state.
-//    ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);
-//    Set_LED_RGB(0b110); //Yellow LED
-//    if (detect != TRIGGER){
-//        state = IDLE;
-//    }
-//    
-//}
 
 void main(void)
 {
@@ -499,7 +556,6 @@ void main(void)
         
             //TODO: Add I2C error check here
         
-        //It might make sense to handle all error handling state changes here separately. That could cause a timer started in one of the states to not be disabled as expected though.
         
         switch(state){
             case INIT:
@@ -521,11 +577,7 @@ void main(void)
             case CHARGING_WAIT:
                 chargingWait();
                 break;
-                
-//            case CHARGE_OC_LOCKOUT:
-//                chargeOClockout();
-//                break;
-                
+
             case CELL_BALANCE:
                 cellBalance();
                 break;
@@ -533,18 +585,11 @@ void main(void)
             case OUTPUT_EN:
                 outputEN();
                 break;
-                
-//            case DISCHARGE_OC_LOCKOUT:
-//                dischargeOClockout();
-//                break;  
-                
+
             case ERROR:
                 error();
                 break;
                 
-//            case IDLE_WAIT_TRIGGER_RELEASE:
-//                idleWaitTriggerRelease();
-//                break;
         }
         
         if (TMR4_HasOverflowOccured()){         //Every 32ms 

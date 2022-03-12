@@ -83,7 +83,7 @@ const struct ISL_reg_bits_struct {  //Stores one array for each register setting
     isl_locate_t SHORT_CIRCUIT_STATUS[3];
     isl_locate_t LOAD_FAIL_STATUS[3];
     isl_locate_t INT_OVER_TEMP_STATUS[3];
-    isl_locate_t EXP_OVER_TEMP_STATUS[3];
+    isl_locate_t EXT_OVER_TEMP_STATUS[3];
     
     isl_locate_t CELL_BALANCE_6bits[3]; //0x02 Cell Balance Registers
     
@@ -132,7 +132,7 @@ const struct ISL_reg_bits_struct {  //Stores one array for each register setting
     .SHORT_CIRCUIT_STATUS = {0x01, 2, 1},
     .LOAD_FAIL_STATUS = {0x01, 3, 1},
     .INT_OVER_TEMP_STATUS = {0x01, 4, 1},
-    .EXP_OVER_TEMP_STATUS = {0x01, 5, 1},
+    .EXT_OVER_TEMP_STATUS = {0x01, 5, 1},
 
     .CELL_BALANCE_6bits = {0x02, 1, 6}, //0x02 Cell Balance Registers; Register 0x02, LSB in position 1, bit length 6
     
