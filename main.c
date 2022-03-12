@@ -205,38 +205,82 @@ bool chargeTempCheck(void){
 void setErrorReasonFlags(volatile error_reason_t *datastore, spacetime_position_t timeframe){
     
     bool charge_fault_check = false;
-    if (timeframe == PRESENT && (past_error_reason & CHRG_PRESENT)){
+    if (timeframe == PRESENT && past_error_reason.DETECT_MODE == CHARGER){
         charge_fault_check = true;
     }
     
         //Set error reason indicator
-    if (ISL_GetSpecificBits_cached(ISL.INT_OVER_TEMP_STATUS)){
-        *datastore |= ISL_INT_OVERTEMP_FLAG;}
-    if (ISL_GetSpecificBits_cached(ISL.EXT_OVER_TEMP_STATUS)){
-        *datastore |= ISL_EXT_OVERTEMP_FLAG;}
-    if (ISL_GetSpecificBits_cached(ISL.LOAD_FAIL_STATUS)){
-        *datastore |= LOAD_PRESENT_FLAG;}
-    if (ISL_GetSpecificBits_cached(ISL.SHORT_CIRCUIT_STATUS)){
-        *datastore |= DISCHARGE_SC_FLAG;}
-    if (ISL_GetSpecificBits_cached(ISL.OC_DISCHARGE_STATUS)){
-        *datastore |= DISCHARGE_OC_FLAG;}
-    if (ISL_GetSpecificBits_cached(ISL.OC_CHARGE_STATUS)){
-        *datastore |= CHARGE_OC_FLAG;}
+//    if (ISL_GetSpecificBits_cached(ISL.INT_OVER_TEMP_STATUS)){
+//        //*datastore |= ISL_INT_OVERTEMP_FLAG;
+//        datastore->ISL_INT_OVERTEMP_FLAG = true;
+//    }
     
-    if (detect == TRIGGER){
-        *datastore |= TRIG_PRESENT;}
-    if (detect == CHARGER){
-        *datastore |= CHRG_PRESENT;}
+    datastore->ISL_INT_OVERTEMP_FLAG |= ISL_GetSpecificBits_cached(ISL.INT_OVER_TEMP_STATUS);
+    
+    
+//    if (ISL_GetSpecificBits_cached(ISL.EXT_OVER_TEMP_STATUS)){
+//        //*datastore |= ISL_EXT_OVERTEMP_FLAG;
+//        datastore->ISL_EXT_OVERTEMP_FLAG = true;
+//    }
+    
+    datastore->ISL_EXT_OVERTEMP_FLAG |= ISL_GetSpecificBits_cached(ISL.EXT_OVER_TEMP_STATUS);
+    
+//    if (ISL_GetSpecificBits_cached(ISL.LOAD_FAIL_STATUS)){
+//        //*datastore |= LO AD_PRESENT_FLAG;
+//        datastore->LOAD_PRESENT_FLAG = true;
+//    }
+    
+    datastore->LOAD_PRESENT_FLAG |= ISL_GetSpecificBits_cached(ISL.LOAD_FAIL_STATUS);
+    
+    
+//    if (ISL_GetSpecificBits_cached(ISL.SHORT_CIRCUIT_STATUS)){
+//        //*datastore |= DISCHARGE_SC_FLAG;
+//        datastore->DISCHARGE_SC_FLAG = true;
+//    }
+    datastore->DISCHARGE_SC_FLAG |= ISL_GetSpecificBits_cached(ISL.SHORT_CIRCUIT_STATUS);
+    
+//    if (ISL_GetSpecificBits_cached(ISL.OC_DISCHARGE_STATUS)){
+//        //*datastore |= DISCHARGE_OC_FLAG;
+//        datastore->DISCHARGE_OC_FLAG = true;
+//    }
+    datastore->DISCHARGE_OC_FLAG |= ISL_GetSpecificBits_cached(ISL.OC_DISCHARGE_STATUS);
+    
+//    if (ISL_GetSpecificBits_cached(ISL.OC_CHARGE_STATUS)){
+//        //*datastore |= CHARGE_OC_FLAG;
+//        datastore->CHARGE_OC_FLAG = true;
+//    }
+    datastore->CHARGE_OC_FLAG |= ISL_GetSpecificBits_cached(ISL.OC_CHARGE_STATUS);
+    
+//    if (detect == TRIGGER){
+//        *datastore |= TRIG_PRESENT;
+//        datastore->TRIG_PRESENT = true;
+//    }
+//    if (detect == CHARGER){
+//        *datastore |= CHRG_PRESENT;}
+    
+    datastore->DETECT_MODE = detect;
     
     if (timeframe == PAST){                             //PAST means we are storing the data of an error state at the time of encounter so we can access it in the future. Hysteresis doesn't cause us to enter the error state so we don't check it. We can also just check the current state we are in to determine if we need to use charging temp limits.
-        if (!(isl_int_temp < MAX_DISCHARGE_TEMP_C)){
-            *datastore |= ISL_INT_OVERTEMP_PICREAD;}
-        if (!(thermistor_temp < MAX_DISCHARGE_TEMP_C)){
-            *datastore |= THERMISTOR_OVERTEMP_PICREAD;}
-        if (state == CHARGING && !(isl_int_temp < MAX_CHARGE_TEMP_C)){    //Stricter charging temp limits
-            *datastore |= CHARGE_ISL_OVERTEMP_PICREAD;}
-        if (state == CHARGING && !(thermistor_temp < MAX_CHARGE_TEMP_C)){    //Stricter charging temp limits
-           *datastore |= CHARGE_THERMISTOR_OVERTEMP_PICREAD;}
+        
+        
+//        if (!(isl_int_temp < MAX_DISCHARGE_TEMP_C)){
+//            *datastore |= ISL_INT_OVERTEMP_PICREAD;}
+        
+        datastore->ISL_INT_OVERTEMP_PICREAD |= !(isl_int_temp < MAX_DISCHARGE_TEMP_C);
+        
+//        if (!(thermistor_temp < MAX_DISCHARGE_TEMP_C)){
+//            *datastore |= THERMISTOR_OVERTEMP_PICREAD;}
+        datastore->THERMISTOR_OVERTEMP_PICREAD |= !(thermistor_temp < MAX_DISCHARGE_TEMP_C);
+        
+//        if (state == CHARGING && !(isl_int_temp < MAX_CHARGE_TEMP_C)){    //Stricter charging temp limits
+//            *datastore |= CHARGE_ISL_OVERTEMP_PICREAD;}
+        datastore->CHARGE_ISL_OVERTEMP_PICREAD |= (state == CHARGING && !(isl_int_temp < MAX_CHARGE_TEMP_C));
+        
+//        if (state == CHARGING && !(thermistor_temp < MAX_CHARGE_TEMP_C)){    //Stricter charging temp limits
+//           *datastore |= CHARGE_THERMISTOR_OVERTEMP_PICREAD;}
+        datastore->CHARGE_THERMISTOR_OVERTEMP_PICREAD |= (state == CHARGING && !(thermistor_temp < MAX_CHARGE_TEMP_C));
+        
+        
     }
     else if (timeframe == PRESENT){                     //PRESENT means we want to access the current reason we haven't left the error state. This only gets called from within the error state.
         if (!(isl_int_temp < MAX_DISCHARGE_TEMP_C)){
@@ -258,9 +302,10 @@ void setErrorReasonFlags(volatile error_reason_t *datastore, spacetime_position_
     }
 
     
-    if (!(discharge_current_mA < MAX_DISCHARGE_CURRENT_mA)){
-        *datastore |= DISCHARGE_OC_SHUNT_PICREAD;}
+//    if (!(discharge_current_mA < MAX_DISCHARGE_CURRENT_mA)){
+//        *datastore |= DISCHARGE_OC_SHUNT_PICREAD;}
     
+    datastore->DISCHARGE_OC_SHUNT_PICREAD |= !(discharge_current_mA < MAX_DISCHARGE_CURRENT_mA);
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -489,8 +534,7 @@ void error(void){
     current_error_reason = 0;
     setErrorReasonFlags(&current_error_reason, PRESENT);
     
-    //Right now, every time safetyChecks or chargeTempCheck is run, even when in an error state, the past_error_reason will be written to. This isn't terrible because we don't clear past_error_reason, but it would be errors that occur after the initial error would be recorded as having also occured in the initial error.
-    
+   //I think we could replace a lot of these checks with the contents of current_error_reason, including getting rid of any charge_fault checks here
     if (detect == NONE                                                  //Trigger or charger is removed
         && safetyChecks()                                           //All faults have recovered
         && ISL_GetSpecificBits_cached(ISL.LOAD_FAIL_STATUS) == 0
