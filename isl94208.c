@@ -5,12 +5,7 @@
 static uint8_t _GenerateMask(uint8_t length);
 static uint16_t _ConvertADCtoMV(uint16_t adcval);
 
-void ISL_Init(void){
-//    ISL_SetSpecificBits(ISL.ENABLE_FEAT_SET_WRITES, 1);
-//    ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_SET_WRITES, 1);
-//    ISL_SetSpecificBits(ISL.ENABLE_CHARGE_SET_WRITES, 1);
-    
-    
+void ISL_Init(void){ 
     ISL_SetSpecificBits((uint8_t[]){WriteEnable, 5, 3}, 0b111);    //Set all three feature set, charge set, and discharge set write bits
     ISL_SetSpecificBits(ISL.FORCE_POR, 1);                          //Make sure the ISL is clean reset
     __delay_ms(5);      //Wait for things to settle. This isn't in the datasheet but if you send I2C write too soon after POR, the writes won't happen.
@@ -23,19 +18,16 @@ void ISL_Init(void){
     ISL_Write_Register(DischargeSet, 0b00000000);
     
     /* 0 = Auto OC charge control enabled
-     00 = 100mV Charge OC threshold @ 100mOhm shunt = 1A limit
+     10 = 140mV Charge OC threshold @ 100mOhm shunt = 1.4A limit. Ran in to overcurrent charging trips using 600mA Dyson wall adapter with 1A limit set. Set here to 1.4A to match how the original BMS was configured.
      0 = short circuit timeout of 190us
      1 = charge OC delay divided by 32,  = 2.5ms
      1 = discharge OC delay divided by 64 = 2.5ms
      00 = OC charge timeout 80ms or 2.5ms if charge time divider set 
      */
-    ISL_Write_Register(ChargeSet, 0b00001100);
+    ISL_Write_Register(ChargeSet, 0b01001100);
    
     ISL_SetSpecificBits(ISL.WKPOL, 1);  //Set wake signal to be active high. Trigger pulled > NC switch unpressed > circuit closed > WKUP line pulled high
     ISL_SetSpecificBits( (uint8_t[]){WriteEnable, 5, 3}, 0b000);    //Clear all three feature set, charge set, and discharge set write bits
-//    ISL_SetSpecificBits(ISL.ENABLE_FEAT_SET_WRITES, 0);
-//    ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_SET_WRITES, 0);
-//    ISL_SetSpecificBits(ISL.ENABLE_CHARGE_SET_WRITES, 0);
 }
 
 uint8_t ISL_Read_Register(isl_reg_t reg){  //Allows easily retrieving an entire register. Ex. ISL_Read_Register(ISL_CONFIG_REG); result = ISL_RegData[Config]

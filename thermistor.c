@@ -17,7 +17,7 @@ uint8_t getThermistorTemp (modelnum_t modelnum){
     
     
     
-    //Until we find the index where the voltage at i is less than or equal to our read value, and the voltage at i+1 is greater than our read value
+    //Loop until we find the index where the voltage at i is less than or equal to our read value, and the voltage at i+1 is greater than our read value
     //Meaning we found the two index values our read value is between
     while ( !(ThermistorLUT[modelnum][index][voltage] * 10 <= pic_thermistor) || !(ThermistorLUT[modelnum][index+1][voltage] * 10 > pic_thermistor)  ){
         iteration++;

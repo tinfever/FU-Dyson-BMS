@@ -50,6 +50,7 @@
 #include "isl94208.h"
 #include "config.h"
 #include "thermistor.h"
+#include "led_blink_pattern.h"
 
 void Set_LED_RGB(uint8_t RGB){  //Accepts binary input 0b000. Bit 2 = Red Enable. Bit 1 = Green Enable. Bit 0 = Red Enable. R.G.B.
     if (RGB & 0b001){
@@ -172,7 +173,7 @@ bool safetyChecks (void){
     result &= (discharge_current_mA < MAX_DISCHARGE_CURRENT_mA);     //We aren't discharging more than 30A
     
     if (!result && state != ERROR){         //Makes sure we don't write new errors in to past_error_reason while we are in the error state
-        setErrorReasonFlags(&past_error_reason, PAST);
+        setErrorReasonFlags(&past_error_reason);
     }
     
     return result;
@@ -187,9 +188,12 @@ bool maxCellOK(void){
 }
 
 bool chargeTempCheck(void){
-    bool result = (isl_int_temp < MAX_CHARGE_TEMP_C && thermistor_temp < MAX_CHARGE_TEMP_C);
+    bool result = true;
+    result &= (isl_int_temp < MAX_CHARGE_TEMP_C);
+    result &= (thermistor_temp < MAX_CHARGE_TEMP_C);
+    
     if (!result && state != ERROR){
-        setErrorReasonFlags(&past_error_reason, PAST);
+        setErrorReasonFlags(&past_error_reason);
     }
     return result;
 }
@@ -202,110 +206,36 @@ bool chargeTempCheck(void){
  * Now that we are actually recording the reason for an error when it occurs, before any resolution has been taken,
  *  we can check that actual data to determine if we should be using the stricter charging temp limits.
  */
-void setErrorReasonFlags(volatile error_reason_t *datastore, spacetime_position_t timeframe){
-    
-    bool charge_fault_check = false;
-    if (timeframe == PRESENT && past_error_reason.DETECT_MODE == CHARGER){
-        charge_fault_check = true;
-    }
-    
-        //Set error reason indicator
-//    if (ISL_GetSpecificBits_cached(ISL.INT_OVER_TEMP_STATUS)){
-//        //*datastore |= ISL_INT_OVERTEMP_FLAG;
-//        datastore->ISL_INT_OVERTEMP_FLAG = true;
-//    }
-    
+void setErrorReasonFlags(volatile error_reason_t *datastore){
     datastore->ISL_INT_OVERTEMP_FLAG |= ISL_GetSpecificBits_cached(ISL.INT_OVER_TEMP_STATUS);
-    
-    
-//    if (ISL_GetSpecificBits_cached(ISL.EXT_OVER_TEMP_STATUS)){
-//        //*datastore |= ISL_EXT_OVERTEMP_FLAG;
-//        datastore->ISL_EXT_OVERTEMP_FLAG = true;
-//    }
-    
     datastore->ISL_EXT_OVERTEMP_FLAG |= ISL_GetSpecificBits_cached(ISL.EXT_OVER_TEMP_STATUS);
-    
-//    if (ISL_GetSpecificBits_cached(ISL.LOAD_FAIL_STATUS)){
-//        //*datastore |= LO AD_PRESENT_FLAG;
-//        datastore->LOAD_PRESENT_FLAG = true;
-//    }
-    
-    datastore->LOAD_PRESENT_FLAG |= ISL_GetSpecificBits_cached(ISL.LOAD_FAIL_STATUS);
-    
-    
-//    if (ISL_GetSpecificBits_cached(ISL.SHORT_CIRCUIT_STATUS)){
-//        //*datastore |= DISCHARGE_SC_FLAG;
-//        datastore->DISCHARGE_SC_FLAG = true;
-//    }
-    datastore->DISCHARGE_SC_FLAG |= ISL_GetSpecificBits_cached(ISL.SHORT_CIRCUIT_STATUS);
-    
-//    if (ISL_GetSpecificBits_cached(ISL.OC_DISCHARGE_STATUS)){
-//        //*datastore |= DISCHARGE_OC_FLAG;
-//        datastore->DISCHARGE_OC_FLAG = true;
-//    }
-    datastore->DISCHARGE_OC_FLAG |= ISL_GetSpecificBits_cached(ISL.OC_DISCHARGE_STATUS);
-    
-//    if (ISL_GetSpecificBits_cached(ISL.OC_CHARGE_STATUS)){
-//        //*datastore |= CHARGE_OC_FLAG;
-//        datastore->CHARGE_OC_FLAG = true;
-//    }
+    datastore->ISL_INT_OVERTEMP_PICREAD |= !(isl_int_temp < MAX_DISCHARGE_TEMP_C);
+    datastore->THERMISTOR_OVERTEMP_PICREAD |= !(thermistor_temp < MAX_DISCHARGE_TEMP_C);
     datastore->CHARGE_OC_FLAG |= ISL_GetSpecificBits_cached(ISL.OC_CHARGE_STATUS);
-    
-//    if (detect == TRIGGER){
-//        *datastore |= TRIG_PRESENT;
-//        datastore->TRIG_PRESENT = true;
-//    }
-//    if (detect == CHARGER){
-//        *datastore |= CHRG_PRESENT;}
-    
+    datastore->DISCHARGE_OC_FLAG |= ISL_GetSpecificBits_cached(ISL.OC_DISCHARGE_STATUS);
+    datastore->DISCHARGE_SC_FLAG |= ISL_GetSpecificBits_cached(ISL.SHORT_CIRCUIT_STATUS);
+    datastore->DISCHARGE_OC_SHUNT_PICREAD |= !(discharge_current_mA < MAX_DISCHARGE_CURRENT_mA);
+    datastore->CHARGE_ISL_OVERTEMP_PICREAD |= (state == CHARGING && !(isl_int_temp < MAX_CHARGE_TEMP_C));
+    datastore->CHARGE_THERMISTOR_OVERTEMP_PICREAD |= (state == CHARGING && !(thermistor_temp < MAX_CHARGE_TEMP_C));
     datastore->DETECT_MODE = detect;
     
-    if (timeframe == PAST){                             //PAST means we are storing the data of an error state at the time of encounter so we can access it in the future. Hysteresis doesn't cause us to enter the error state so we don't check it. We can also just check the current state we are in to determine if we need to use charging temp limits.
-        
-        
-//        if (!(isl_int_temp < MAX_DISCHARGE_TEMP_C)){
-//            *datastore |= ISL_INT_OVERTEMP_PICREAD;}
-        
-        datastore->ISL_INT_OVERTEMP_PICREAD |= !(isl_int_temp < MAX_DISCHARGE_TEMP_C);
-        
-//        if (!(thermistor_temp < MAX_DISCHARGE_TEMP_C)){
-//            *datastore |= THERMISTOR_OVERTEMP_PICREAD;}
-        datastore->THERMISTOR_OVERTEMP_PICREAD |= !(thermistor_temp < MAX_DISCHARGE_TEMP_C);
-        
-//        if (state == CHARGING && !(isl_int_temp < MAX_CHARGE_TEMP_C)){    //Stricter charging temp limits
-//            *datastore |= CHARGE_ISL_OVERTEMP_PICREAD;}
-        datastore->CHARGE_ISL_OVERTEMP_PICREAD |= (state == CHARGING && !(isl_int_temp < MAX_CHARGE_TEMP_C));
-        
-//        if (state == CHARGING && !(thermistor_temp < MAX_CHARGE_TEMP_C)){    //Stricter charging temp limits
-//           *datastore |= CHARGE_THERMISTOR_OVERTEMP_PICREAD;}
-        datastore->CHARGE_THERMISTOR_OVERTEMP_PICREAD |= (state == CHARGING && !(thermistor_temp < MAX_CHARGE_TEMP_C));
-        
-        
-    }
-    else if (timeframe == PRESENT){                     //PRESENT means we want to access the current reason we haven't left the error state. This only gets called from within the error state.
-        if (!(isl_int_temp < MAX_DISCHARGE_TEMP_C)){
-        *datastore |= ISL_INT_OVERTEMP_PICREAD;}
-        else if (!(isl_int_temp + HYSTERESIS_TEMP_C < MAX_DISCHARGE_TEMP_C)){       //If we aren't in violation of the main over temp rule, see if we might still be in error due to hysteresis range, but don't do both
-            *datastore |= TEMP_HYSTERESIS;}
-        if (!(thermistor_temp < MAX_DISCHARGE_TEMP_C)){
-            *datastore |= THERMISTOR_OVERTEMP_PICREAD;}
-        else if (!(thermistor_temp + HYSTERESIS_TEMP_C < MAX_DISCHARGE_TEMP_C)){
-            *datastore |= TEMP_HYSTERESIS;}
-        if (charge_fault_check && !(isl_int_temp < MAX_CHARGE_TEMP_C)){    //Stricter charging temp limits
-            *datastore |= CHARGE_ISL_OVERTEMP_PICREAD;}
-        else if (charge_fault_check && !(isl_int_temp + HYSTERESIS_TEMP_C < MAX_CHARGE_TEMP_C)){      //need to rethink charging check given this function is used for past and present error checking
-            *datastore |= TEMP_HYSTERESIS;}
-        if (charge_fault_check && !(thermistor_temp < MAX_CHARGE_TEMP_C)){    //Stricter charging temp limits
-           *datastore |= CHARGE_THERMISTOR_OVERTEMP_PICREAD;}
-        else if (charge_fault_check && !(thermistor_temp + HYSTERESIS_TEMP_C < MAX_CHARGE_TEMP_C)){      
-            *datastore |= TEMP_HYSTERESIS;}  
-    }
 
-    
-//    if (!(discharge_current_mA < MAX_DISCHARGE_CURRENT_mA)){
-//        *datastore |= DISCHARGE_OC_SHUNT_PICREAD;}
-    
-    datastore->DISCHARGE_OC_SHUNT_PICREAD |= !(discharge_current_mA < MAX_DISCHARGE_CURRENT_mA);
+    if (state == ERROR) { //If we are in the error state, we need to check if we are in hysteresis violation 
+        datastore->TEMP_HYSTERESIS |= (isl_int_temp < MAX_DISCHARGE_TEMP_C && !(isl_int_temp + HYSTERESIS_TEMP_C < MAX_DISCHARGE_TEMP_C));  //Hysteresis only matters if we aren't over the main temp. limit.
+        datastore->TEMP_HYSTERESIS |= (thermistor_temp < MAX_DISCHARGE_TEMP_C && !(thermistor_temp + HYSTERESIS_TEMP_C < MAX_DISCHARGE_TEMP_C));
+        
+        bool charge_fault_check = (past_error_reason.DETECT_MODE == CHARGER);
+
+        datastore->TEMP_HYSTERESIS |= (charge_fault_check
+                                    && isl_int_temp < MAX_CHARGE_TEMP_C
+                                    && !(isl_int_temp + HYSTERESIS_TEMP_C < MAX_CHARGE_TEMP_C));
+
+        datastore->TEMP_HYSTERESIS |= (charge_fault_check
+                                    && thermistor_temp < MAX_CHARGE_TEMP_C
+                                    && !(thermistor_temp + HYSTERESIS_TEMP_C < MAX_CHARGE_TEMP_C));
+        
+        
+    }
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -355,11 +285,16 @@ void init(void){
 }
 
 void sleep(void){
-    ISL_SetSpecificBits(ISL.SLEEP, 1);
+    #ifndef __DEBUG     //It won't go to sleep but it will get stuck in SLEEP state with no way out.
+    ISL_SetSpecificBits(ISL.SLEEP, 1);  
+    #endif
+
 }
 
 void idle(void){
     Set_LED_RGB(0b010); //LED Green
+    //ledBlinkpattern (4, 0b010, 500);
+    
     
     if (detect == TRIGGER                       //Trigger is pulled
         && minCellOK()          //Min cell is not below low voltage cut out of 3V
@@ -369,6 +304,7 @@ void idle(void){
         ){
             sleep_timeout_counter.enable = false;   //We aren't going to be sleeping soon
             state = OUTPUT_EN;
+            //resetLEDBlinkPattern();
     }
     else if (detect == CHARGER                       //Charger is connected
             && charge_complete_flag == false         //We haven't already done a complete charge cycle
@@ -378,6 +314,7 @@ void idle(void){
         ){
                 sleep_timeout_counter.enable = false;   //We aren't going to be sleeping soon
                 state = CHARGING; 
+                //resetLEDBlinkPattern();
     }
     else if (detect == NONE                         //Start sleep counter if we are idle with no charger or trigger, but no errors
             && ISL_GetSpecificBits_cached(ISL.WKUP_STATUS) == 0
@@ -390,6 +327,7 @@ void idle(void){
     else if (!safetyChecks()){                        //Somehow there was an error  
         sleep_timeout_counter.enable = false;
         state = ERROR;
+        //resetLEDBlinkPattern();
         //TODO: add checking for other error types. Make sure to add exit methods to error state function as well.
     }
     
@@ -400,7 +338,10 @@ void idle(void){
     
     if (sleep_timeout_counter.value >  IDLE_SLEEP_TIMEOUT && sleep_timeout_counter.enable == true){    //938*32ms = 30.016s //If we are in IDLE state for 30 seconds and not on the charger, go to sleep. We will stay awake on the charger since we have power to spare and can then make sure battery voltages don't drop over time.
         sleep_timeout_counter.enable = false;
+        sleep_timeout_counter.value = 0;
+        #ifndef __DEBUG
         state = SLEEP;
+        #endif
     }
     
     //TODO: add entry in to error state if trigger pulled while voltage too low so we go to sleep
@@ -518,47 +459,54 @@ void outputEN(void){
 }
 
 void error(void){
-    //TODO: I should probably add a flag that gets set to specify the type of error encountered. Then we can reference that flag to have an error-specific LED indicator action.
+    //TODO: Add LED indicator function that communicates past_error_reason
     //TODO: Add a write to EEPROM with error info for logging
 
-    //Load mon may not work because the only thing controlling the load (vacuum) is the MOSFET. The load is technically always on.
-    Set_LED_RGB(0b100); //Red LED
-    ISL_Write_Register(FETControl, 0b01000000); //Enable output load monitoring so we can tell when load is removed (bit 6), also make sure charge and discharge FETs are off (bits 1 and 0))
+    //Set_LED_RGB(0b100); //Red LED
+    ISL_Write_Register(FETControl, 0b00000000);     //Make sure all FETs are disabled
     
-    static bool charge_fault = false;
+    current_error_reason = (error_reason_t){0};
+    setErrorReasonFlags(&current_error_reason);
     
-    if ( (past_error_reason & CHRG_PRESENT) ){       //past_error_reason will contain reason for entry in to error state. If the charger was present when error occured, we need to use stricter charging temp limits
-        charge_fault = true;
-    }
-    
-    current_error_reason = 0;
-    setErrorReasonFlags(&current_error_reason, PRESENT);
-    
-   //I think we could replace a lot of these checks with the contents of current_error_reason, including getting rid of any charge_fault checks here
-    if (detect == NONE                                                  //Trigger or charger is removed
-        && safetyChecks()                                           //All faults have recovered
-        && ISL_GetSpecificBits_cached(ISL.LOAD_FAIL_STATUS) == 0
+    if (!current_error_reason.ISL_INT_OVERTEMP_FLAG
+        && !current_error_reason.ISL_EXT_OVERTEMP_FLAG 
+        && !current_error_reason.ISL_INT_OVERTEMP_PICREAD 
+        && !current_error_reason.THERMISTOR_OVERTEMP_PICREAD 
+        && !current_error_reason.CHARGE_OC_FLAG 
+        && !current_error_reason.DISCHARGE_OC_FLAG 
+        && !current_error_reason.DISCHARGE_SC_FLAG 
+        && !current_error_reason.DISCHARGE_OC_SHUNT_PICREAD 
+        && !current_error_reason.CHARGE_ISL_OVERTEMP_PICREAD 
+        && !current_error_reason.CHARGE_THERMISTOR_OVERTEMP_PICREAD 
+        && !current_error_reason.TEMP_HYSTERESIS 
+        && current_error_reason.DETECT_MODE == NONE
         && discharge_current_mA == 0
-        && !charge_fault                                        //Since we haven't implement a way to determine if the error occured while charging
-        && isl_int_temp + HYSTERESIS_TEMP_C < MAX_DISCHARGE_TEMP_C        //Adding a few degrees of hysteresis before exiting from error state
-        && thermistor_temp + HYSTERESIS_TEMP_C < MAX_DISCHARGE_TEMP_C
             ){
-            ISL_SetSpecificBits(ISL.VMON_CHECK, 0); //Turn off output load monitoring
             sleep_timeout_counter.enable = false;
-            past_error_reason = 0;    //Clear error reason value for future usage
-            current_error_reason = 0;
+            past_error_reason = (error_reason_t){0};    //Clear error reason value for future usage
+            current_error_reason = (error_reason_t){0};
+            resetLEDBlinkPattern();
             state = IDLE;
-    }
+            return;
+        }
+    
+    if (past_error_reason.ISL_INT_OVERTEMP_FLAG) ledBlinkpattern (4, 0b100, 500);
+    else if (past_error_reason.ISL_EXT_OVERTEMP_FLAG) ledBlinkpattern (5, 0b100, 500);
+    else if (past_error_reason.ISL_INT_OVERTEMP_PICREAD) ledBlinkpattern (6, 0b100, 500);
+    else if (past_error_reason.THERMISTOR_OVERTEMP_PICREAD) ledBlinkpattern (7, 0b100, 500);
+    else if (past_error_reason.CHARGE_OC_FLAG) ledBlinkpattern (8, 0b100, 500);
+    else if (past_error_reason.DISCHARGE_OC_FLAG) ledBlinkpattern (9, 0b100, 500);
+    else if (past_error_reason.DISCHARGE_SC_FLAG) ledBlinkpattern (10, 0b100, 500);
+    else if (past_error_reason.DISCHARGE_OC_SHUNT_PICREAD) ledBlinkpattern (11, 0b100, 500);
+    else if (past_error_reason.CHARGE_ISL_OVERTEMP_PICREAD) ledBlinkpattern (12, 0b100, 500);
+    else if (past_error_reason.CHARGE_THERMISTOR_OVERTEMP_PICREAD) ledBlinkpattern (13, 0b100, 500);
+    //else if (past_error_reason.TEMP_HYSTERESIS) ledBlinkpattern (14, 0b100, 500);
+    //else if (past_error_reason.DETECT_MODE == CHARGER) ledBlinkpattern (2, 0b101, 500);                  //You still have the vacuum on the charger!
+    //else if (past_error_reason.DETECT_MODE == TRIGGER) ledBlinkpattern (3, 0b101, 500);                  
+    else ledBlinkpattern (20, 0b100, 500);                                                                  //Unidentified Error
     
     
     
-    if (charge_fault
-        && isl_int_temp + HYSTERESIS_TEMP_C < MAX_CHARGE_TEMP_C         //Adding a few degrees of hysteresis before exiting from error state
-        && thermistor_temp + HYSTERESIS_TEMP_C < MAX_CHARGE_TEMP_C
-        ){
-            charge_fault = false;
-    }
-
     
     
     
@@ -647,6 +595,10 @@ void main(void)
             
             if (sleep_timeout_counter.enable){
                 sleep_timeout_counter.value++;
+            }
+            
+            if (nonblocking_wait_counter.enable){
+                nonblocking_wait_counter.value++;
             }
         
         

@@ -10,43 +10,6 @@
 #include "mcc_generated_files/mcc.h"
 #include "i2c.h"
 
-//typedef enum {
-//    ISL_CONFIG_REG = 0x00,
-//    ISL_OP_STATUS_REG,
-//    ISL_CELL_BALANCE_REG,
-//    ISL_ANALOG_OUT_REG,
-//    ISL_FET_CONTROL_REG,
-//    ISL_DISCHARGE_SET_REG,
-//    ISL_CHARGE_SET_REG,
-//    ISL_FEATURE_SET_REG,
-//    ISL_WRITE_ENABLE_REG, 
-//    __ISL_NUMBER_OF_REG
-//} isl_reg_t;
-    
-//struct ISL_register_struct{ //Struct we can store register data when we read them
-//    uint8_t Config;
-//    uint8_t Status;
-//    uint8_t CellBalance;
-//    uint8_t AnalogOut;
-//    uint8_t FETControl;
-//    uint8_t DischargeSet;
-//    uint8_t ChargeSet;
-//    uint8_t FeatureSet;
-//    uint8_t WriteEnable;
-//} ISL_RegData;
-//
-//uint8_t *const ISL_RegDataPointer[] = { //Array to allow determining output data pointer location from input isl_reg_t name
-//    &ISL_RegData.Config,
-//    &ISL_RegData.Status,
-//    &ISL_RegData.CellBalance,
-//    &ISL_RegData.AnalogOut,
-//    &ISL_RegData.FETControl,
-//    &ISL_RegData.DischargeSet,
-//    &ISL_RegData.ChargeSet,
-//    &ISL_RegData.FeatureSet,
-//    &ISL_RegData.WriteEnable,
-//};
-
 typedef enum {
     Config = 0x00,
     Status,
