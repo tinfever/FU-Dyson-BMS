@@ -37,9 +37,10 @@ typedef struct {
     bool DISCHARGE_OC_FLAG : 1;
     bool DISCHARGE_SC_FLAG : 1;
     bool DISCHARGE_OC_SHUNT_PICREAD : 1;
-    bool CHARGE_ISL_OVERTEMP_PICREAD : 1;
+    bool CHARGE_ISL_INT_OVERTEMP_PICREAD : 1;
     bool CHARGE_THERMISTOR_OVERTEMP_PICREAD : 1;
     bool TEMP_HYSTERESIS : 1;
+    bool ERROR_TIMEOUT_WAIT : 1;
     detect_t DETECT_MODE;
 } error_reason_t;
 
@@ -74,6 +75,7 @@ typedef struct {
 counter_t charge_wait_counter = {0,0};
 counter_t sleep_timeout_counter = {0,0};
 counter_t nonblocking_wait_counter = {0,0};
+counter_t error_timeout_wait_counter = {0,0};
 big_counter_t charge_duration_counter = {0,0};
 
 uint16_t readADCmV(adc_channel_t channel);

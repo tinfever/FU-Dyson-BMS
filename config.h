@@ -9,6 +9,11 @@
 #define	CONFIG_H
 
 
+//Uncomment these lines while in debug mode to disable certain temperature checks for testing.
+#ifdef __DEBUG  //Make sure these only work in debug mode
+//#define __DEBUG_DISABLE_PIC_THERMISTOR_READ       //Uncomment for testing
+//#define __DEBUG_DISABLE_PIC_ISL_INT_READ          //Uncomment for testing
+#endif
 
 #define redLED RA7
 #define greenLED RB3
@@ -43,9 +48,9 @@
 
 const uint16_t VREF_VOLTAGE_mV = 2500;
 
-const uint8_t MAX_CHARGE_TEMP_C = 30;           //Celsius. MAX_DISCHARGE_TEMP_C must be greater than MAX_CHARGE_TEMP_C for it to work correctly.
-const uint8_t MAX_DISCHARGE_TEMP_C = 35;        //Celsius
-const uint16_t MAX_DISCHARGE_CURRENT_mA = 11000;
+const uint8_t MAX_CHARGE_TEMP_C = 150;           //Celsius. MAX_DISCHARGE_TEMP_C must be greater than MAX_CHARGE_TEMP_C for it to work correctly.
+const uint8_t MAX_DISCHARGE_TEMP_C = 160;        //Celsius
+const uint16_t MAX_DISCHARGE_CURRENT_mA = 30000;
 const uint16_t MIN_DISCHARGE_CELL_VOLTAGE_mV = 3000;
 const uint16_t MAX_CHARGE_CELL_VOLTAGE_mV = 4200;
 const uint16_t PACK_CHARGE_NOT_COMPLETE_THRESH_mV = 4100;
@@ -71,6 +76,10 @@ const uint16_t IDLE_SLEEP_TIMEOUT = 938;
 /* Length of time to wait while in an error state before going to sleep
  1876*32ms = 60.032s */
 const uint16_t ERROR_SLEEP_TIMEOUT = 1876;
+
+/* Length of time there must be no errors before exiting error state
+ 94 * 32ms = 3.008s */
+const uint8_t ERROR_EXIT_TIMEOUT = 94;
 
 
 

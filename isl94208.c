@@ -58,9 +58,6 @@ void ISL_SetSpecificBits(const isl_locate_t params[3], uint8_t value){
     uint8_t bit_length = params[BIT_LENGTH];
     uint8_t data = (ISL_Read_Register(reg_addr) & ~(_GenerateMask(bit_length) << bit_addr)) | (uint8_t) (value << bit_addr);      //Take the read data from the I2C register, zero out the bits we are setting, then OR in our data
     ISL_Write_Register(reg_addr, data);   //Doing bitwise OR with previous result so we can determine if multiple errors occur
-    #ifdef __DEBUG
-    ISL_Read_Register(reg_addr);    //Re-read the I2C register so we can confirm any changes by watching variable values in debug.
-    #endif
 }
 
 uint8_t ISL_GetSpecificBits(const isl_locate_t params[3]){

@@ -215,12 +215,20 @@ void setErrorReasonFlags(volatile error_reason_t *datastore){
     datastore->DISCHARGE_OC_FLAG |= ISL_GetSpecificBits_cached(ISL.OC_DISCHARGE_STATUS);
     datastore->DISCHARGE_SC_FLAG |= ISL_GetSpecificBits_cached(ISL.SHORT_CIRCUIT_STATUS);
     datastore->DISCHARGE_OC_SHUNT_PICREAD |= !(discharge_current_mA < MAX_DISCHARGE_CURRENT_mA);
-    datastore->CHARGE_ISL_OVERTEMP_PICREAD |= (state == CHARGING && !(isl_int_temp < MAX_CHARGE_TEMP_C));
+    datastore->CHARGE_ISL_INT_OVERTEMP_PICREAD |= (state == CHARGING && !(isl_int_temp < MAX_CHARGE_TEMP_C));
     datastore->CHARGE_THERMISTOR_OVERTEMP_PICREAD |= (state == CHARGING && !(thermistor_temp < MAX_CHARGE_TEMP_C));
+    datastore->ERROR_TIMEOUT_WAIT |= (state == ERROR && error_timeout_wait_counter.enable && !(error_timeout_wait_counter.value > ERROR_EXIT_TIMEOUT));
     datastore->DETECT_MODE = detect;
     
 
-    if (state == ERROR) { //If we are in the error state, we need to check if we are in hysteresis violation 
+    if (state == ERROR && 
+            (  past_error_reason.ISL_INT_OVERTEMP_FLAG                  //Only stay in hysteresis lockout if the original fault was due to over-temp.
+            || past_error_reason.ISL_EXT_OVERTEMP_FLAG
+            || past_error_reason.ISL_INT_OVERTEMP_PICREAD
+            || past_error_reason.THERMISTOR_OVERTEMP_PICREAD
+            || past_error_reason.CHARGE_ISL_INT_OVERTEMP_PICREAD
+            || past_error_reason.CHARGE_THERMISTOR_OVERTEMP_PICREAD)
+            ) { //If we are in the error state, we need to check if we are in hysteresis violation 
         datastore->TEMP_HYSTERESIS |= (isl_int_temp < MAX_DISCHARGE_TEMP_C && !(isl_int_temp + HYSTERESIS_TEMP_C < MAX_DISCHARGE_TEMP_C));  //Hysteresis only matters if we aren't over the main temp. limit.
         datastore->TEMP_HYSTERESIS |= (thermistor_temp < MAX_DISCHARGE_TEMP_C && !(thermistor_temp + HYSTERESIS_TEMP_C < MAX_DISCHARGE_TEMP_C));
         
@@ -236,6 +244,11 @@ void setErrorReasonFlags(volatile error_reason_t *datastore){
         
         
     }
+    
+//    if (state == ERROR && error_timeout_wait_counter.enable && error_timeout_wait_counter.value <= ERROR_EXIT_TIMEOUT){
+//        datastore->ERROR_TIMEOUT_WAIT == true;
+//    }
+    
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -458,7 +471,7 @@ void outputEN(void){
         }
 }
 
-void error(void){
+    void error(void){
     //TODO: Add LED indicator function that communicates past_error_reason
     //TODO: Add a write to EEPROM with error info for logging
 
@@ -476,19 +489,47 @@ void error(void){
         && !current_error_reason.DISCHARGE_OC_FLAG 
         && !current_error_reason.DISCHARGE_SC_FLAG 
         && !current_error_reason.DISCHARGE_OC_SHUNT_PICREAD 
-        && !current_error_reason.CHARGE_ISL_OVERTEMP_PICREAD 
+        && !current_error_reason.CHARGE_ISL_INT_OVERTEMP_PICREAD 
         && !current_error_reason.CHARGE_THERMISTOR_OVERTEMP_PICREAD 
         && !current_error_reason.TEMP_HYSTERESIS 
         && current_error_reason.DETECT_MODE == NONE
         && discharge_current_mA == 0
             ){
-            sleep_timeout_counter.enable = false;
-            past_error_reason = (error_reason_t){0};    //Clear error reason value for future usage
-            current_error_reason = (error_reason_t){0};
-            resetLEDBlinkPattern();
-            state = IDLE;
-            return;
+            /* This is error wait timeout is necessary because the while the ISL94208 datasheet claims:
+             * "If the over-temperature condition has cleared, this bit is reset when the register is read."
+             * regarding the external over temperature (XOT) bit, this does not appear to be true.
+             * If we are continuously reading the status register, the XOT bit will only be read as asserted roughly once every 560ms.
+             * It acts as if reading it is clearing the bit each time, and then it is re-asserted the next time the ISL94208
+             * does it's automatic temperature scan. Oddly, occasionally we can read the XOT bit as asserted twice in a row.
+             * Most of the time, even under a continuous low voltage (high temperature) on the temp. input,
+             * the XOT bit will only read as asserted roughly 1 in 49 reads. */
+            if (!error_timeout_wait_counter.enable){
+                error_timeout_wait_counter.value = 0;
+                error_timeout_wait_counter.enable = true;
+            }
+            else if (error_timeout_wait_counter.enable && error_timeout_wait_counter.value > ERROR_EXIT_TIMEOUT){       //three seconds must pass with no errors before error state can be exited.
+                error_timeout_wait_counter.enable = false;
+                sleep_timeout_counter.enable = false;
+                past_error_reason = (error_reason_t){0};    //Clear error reason value for future usage
+                current_error_reason = (error_reason_t){0};
+                resetLEDBlinkPattern();
+                state = IDLE;
+                return;
+            }
         }
+    else {
+        error_timeout_wait_counter.enable = false;      //If there are any errors, stop the error exit timeout counter. The next time through the loop there are no errors, the counter will be reset to zero and restarted.
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     if (past_error_reason.ISL_INT_OVERTEMP_FLAG) ledBlinkpattern (4, 0b100, 500);
     else if (past_error_reason.ISL_EXT_OVERTEMP_FLAG) ledBlinkpattern (5, 0b100, 500);
@@ -498,15 +539,12 @@ void error(void){
     else if (past_error_reason.DISCHARGE_OC_FLAG) ledBlinkpattern (9, 0b100, 500);
     else if (past_error_reason.DISCHARGE_SC_FLAG) ledBlinkpattern (10, 0b100, 500);
     else if (past_error_reason.DISCHARGE_OC_SHUNT_PICREAD) ledBlinkpattern (11, 0b100, 500);
-    else if (past_error_reason.CHARGE_ISL_OVERTEMP_PICREAD) ledBlinkpattern (12, 0b100, 500);
+    else if (past_error_reason.CHARGE_ISL_INT_OVERTEMP_PICREAD) ledBlinkpattern (12, 0b100, 500);
     else if (past_error_reason.CHARGE_THERMISTOR_OVERTEMP_PICREAD) ledBlinkpattern (13, 0b100, 500);
-    //else if (past_error_reason.TEMP_HYSTERESIS) ledBlinkpattern (14, 0b100, 500);
-    //else if (past_error_reason.DETECT_MODE == CHARGER) ledBlinkpattern (2, 0b101, 500);                  //You still have the vacuum on the charger!
-    //else if (past_error_reason.DETECT_MODE == TRIGGER) ledBlinkpattern (3, 0b101, 500);                  
     else ledBlinkpattern (20, 0b100, 500);                                                                  //Unidentified Error
     
     
-    
+    //Do I need to add a way to have the LED pattern run a certain number of times, even if trigger/charger is removed? Otherwise, user can only see blink code if they continue to hold trigger down.
     
     
     
@@ -525,10 +563,17 @@ void error(void){
 
 void main(void)
 {
+    
+    
     init();
     
     while (1)
     {
+        #ifdef __DEBUG
+        static uint16_t loop_counter = 0;
+        loop_counter++;
+        #endif  
+        
         if (!ISL_GetSpecificBits(ISL.WKPOL)){//If somehow the ISL was reset and so WKPOL isn't correct, reinitialize everything and clear the I2C bus.
             __debug_break();
             I2C1_Init();
@@ -539,8 +584,19 @@ void main(void)
         ISL_ReadAllCellVoltages();
         ISL_calcCellStats();
         detect = checkDetect();
-        isl_int_temp = ISL_GetInternalTemp();
-        thermistor_temp = getThermistorTemp(modelnum);
+        isl_int_temp = ISL_GetInternalTemp();               //11202 cycles
+        thermistor_temp = getThermistorTemp(modelnum);      //8934 cycles
+        
+        //For testing - Allows reading of actual values from these sensors when defined in config.h.
+        //Overwrites the real value with 25 which will always be an acceptable temperature so that limit is effectively disabled.
+        #ifdef __DEBUG_DISABLE_PIC_THERMISTOR_READ
+        thermistor_temp = 25;
+        #endif
+
+        #ifdef __DEBUG_DISABLE_PIC_ISL_INT_READ
+        isl_int_temp = 25;
+        #endif
+        
         ISL_Read_Register(Config);      //Get config register so we can check WKUP status later on
         ISL_Read_Register(Status);      //Get Status register to check for error flags
         ISL_Read_Register(FETControl);  //Get current FET status
@@ -600,17 +656,24 @@ void main(void)
             if (nonblocking_wait_counter.enable){
                 nonblocking_wait_counter.value++;
             }
+            
+            if (error_timeout_wait_counter.enable){
+                error_timeout_wait_counter.value++;
+            }
+            
         
         
         }
 
 
         
-        #ifdef __DEBUG
-        for (uint8_t i = 0; i < __ISL_NUMBER_OF_REG; i++){
-            ISL_Read_Register(i);
-        }
-        #endif
+//        #ifdef __DEBUG
+//        for (uint8_t i = 0; i < __ISL_NUMBER_OF_REG; i++){
+//            ISL_Read_Register(i);
+//        }
+//        #endif
+        
+
 
 
 
