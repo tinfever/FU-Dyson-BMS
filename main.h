@@ -41,6 +41,7 @@ typedef struct {
     bool CHARGE_THERMISTOR_OVERTEMP_PICREAD : 1;
     bool TEMP_HYSTERESIS : 1;
     bool ERROR_TIMEOUT_WAIT : 1;
+    bool LED_BLINK_CODE_MIN_PRESENTATIONS : 1;
     detect_t DETECT_MODE;
 } error_reason_t;
 
@@ -77,6 +78,7 @@ counter_t sleep_timeout_counter = {0,0};
 counter_t nonblocking_wait_counter = {0,0};
 counter_t error_timeout_wait_counter = {0,0};
 big_counter_t charge_duration_counter = {0,0};
+counter_t LED_code_cycle_counter = {0,0};
 
 uint16_t readADCmV(adc_channel_t channel);
 void setErrorReasonFlags(volatile error_reason_t *datastore);

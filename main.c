@@ -217,7 +217,9 @@ void setErrorReasonFlags(volatile error_reason_t *datastore){
     datastore->DISCHARGE_OC_SHUNT_PICREAD |= !(discharge_current_mA < MAX_DISCHARGE_CURRENT_mA);
     datastore->CHARGE_ISL_INT_OVERTEMP_PICREAD |= (state == CHARGING && !(isl_int_temp < MAX_CHARGE_TEMP_C));
     datastore->CHARGE_THERMISTOR_OVERTEMP_PICREAD |= (state == CHARGING && !(thermistor_temp < MAX_CHARGE_TEMP_C));
-    datastore->ERROR_TIMEOUT_WAIT |= (state == ERROR && error_timeout_wait_counter.enable && !(error_timeout_wait_counter.value > ERROR_EXIT_TIMEOUT));
+    datastore->ERROR_TIMEOUT_WAIT |= (state == ERROR && !(error_timeout_wait_counter.enable && error_timeout_wait_counter.value > ERROR_EXIT_TIMEOUT));
+    datastore->LED_BLINK_CODE_MIN_PRESENTATIONS |= (state == ERROR && !(LED_code_cycle_counter.enable && LED_code_cycle_counter.value > NUM_OF_LED_CODES_AFTER_FAULT_CLEAR));
+                    
     datastore->DETECT_MODE = detect;
     
 
@@ -244,10 +246,6 @@ void setErrorReasonFlags(volatile error_reason_t *datastore){
         
         
     }
-    
-//    if (state == ERROR && error_timeout_wait_counter.enable && error_timeout_wait_counter.value <= ERROR_EXIT_TIMEOUT){
-//        datastore->ERROR_TIMEOUT_WAIT == true;
-//    }
     
 }
 
@@ -481,6 +479,8 @@ void outputEN(void){
     current_error_reason = (error_reason_t){0};
     setErrorReasonFlags(&current_error_reason);
     
+    
+    
     if (!current_error_reason.ISL_INT_OVERTEMP_FLAG
         && !current_error_reason.ISL_EXT_OVERTEMP_FLAG 
         && !current_error_reason.ISL_INT_OVERTEMP_PICREAD 
@@ -495,6 +495,12 @@ void outputEN(void){
         && current_error_reason.DETECT_MODE == NONE
         && discharge_current_mA == 0
             ){
+            if (!LED_code_cycle_counter.enable){
+                LED_code_cycle_counter.value = 0;
+                LED_code_cycle_counter.enable = true;
+            }
+        
+        
             /* This is error wait timeout is necessary because the while the ISL94208 datasheet claims:
              * "If the over-temperature condition has cleared, this bit is reset when the register is read."
              * regarding the external over temperature (XOT) bit, this does not appear to be true.
@@ -507,7 +513,11 @@ void outputEN(void){
                 error_timeout_wait_counter.value = 0;
                 error_timeout_wait_counter.enable = true;
             }
-            else if (error_timeout_wait_counter.enable && error_timeout_wait_counter.value > ERROR_EXIT_TIMEOUT){       //three seconds must pass with no errors before error state can be exited.
+            else if (error_timeout_wait_counter.enable
+                    && error_timeout_wait_counter.value > ERROR_EXIT_TIMEOUT
+                    && LED_code_cycle_counter.enable
+                    && LED_code_cycle_counter.value > NUM_OF_LED_CODES_AFTER_FAULT_CLEAR
+                    ){       //three seconds must pass with no errors before error state can be exited. Also, LED code must be presented the configured number of times after fault/detect clear
                 error_timeout_wait_counter.enable = false;
                 sleep_timeout_counter.enable = false;
                 past_error_reason = (error_reason_t){0};    //Clear error reason value for future usage
@@ -519,18 +529,9 @@ void outputEN(void){
         }
     else {
         error_timeout_wait_counter.enable = false;      //If there are any errors, stop the error exit timeout counter. The next time through the loop there are no errors, the counter will be reset to zero and restarted.
+        LED_code_cycle_counter.enable = false;
     }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
     if (past_error_reason.ISL_INT_OVERTEMP_FLAG) ledBlinkpattern (4, 0b100, 500);
     else if (past_error_reason.ISL_EXT_OVERTEMP_FLAG) ledBlinkpattern (5, 0b100, 500);
     else if (past_error_reason.ISL_INT_OVERTEMP_PICREAD) ledBlinkpattern (6, 0b100, 500);
@@ -543,8 +544,6 @@ void outputEN(void){
     else if (past_error_reason.CHARGE_THERMISTOR_OVERTEMP_PICREAD) ledBlinkpattern (13, 0b100, 500);
     else ledBlinkpattern (20, 0b100, 500);                                                                  //Unidentified Error
     
-    
-    //Do I need to add a way to have the LED pattern run a certain number of times, even if trigger/charger is removed? Otherwise, user can only see blink code if they continue to hold trigger down.
     
     
     

@@ -81,6 +81,9 @@ const uint16_t ERROR_SLEEP_TIMEOUT = 1876;
  94 * 32ms = 3.008s */
 const uint8_t ERROR_EXIT_TIMEOUT = 94;
 
+/* Number of times the LED error code will be presented after the fault is cleared and trigger/charger removed.
+ Ensures the error code won't immediately go away once the user stops pulling the trigger.*/
+const uint8_t NUM_OF_LED_CODES_AFTER_FAULT_CLEAR = 3;
 
 
 
