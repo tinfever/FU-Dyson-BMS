@@ -575,7 +575,7 @@ void error(void){
     else if (past_error_reason.DISCHARGE_OC_SHUNT_PICREAD) ledBlinkpattern (11, 0b100, 500, 1000, 1000);
     else if (past_error_reason.CHARGE_ISL_INT_OVERTEMP_PICREAD) ledBlinkpattern (12, 0b100, 500, 1000, 1000);
     else if (past_error_reason.CHARGE_THERMISTOR_OVERTEMP_PICREAD) ledBlinkpattern (13, 0b100, 500, 1000, 1000);
-    else if (full_discharge_trigger_error) ledBlinkpattern (3, 0b001, 750, 0, 0);       //trigger is pulled but battery is low
+    else if (full_discharge_trigger_error) ledBlinkpattern (3, 0b001, 500, 0, 0);       //trigger is pulled but battery is low
     else ledBlinkpattern (20, 0b100, 500, 1000, 1000);                                                                  //Unidentified Error
     
     
