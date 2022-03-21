@@ -52,9 +52,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <conio.h>
+#include "tmr4.h"
+#include "memory.h"
 #include "dac.h"
 #include "adc.h"
-#include "tmr4.h"
 
 
 

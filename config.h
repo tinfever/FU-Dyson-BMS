@@ -48,14 +48,14 @@
 
 const uint16_t VREF_VOLTAGE_mV = 2500;
 
-const uint8_t MAX_CHARGE_TEMP_C = 150;           //Celsius. MAX_DISCHARGE_TEMP_C must be greater than MAX_CHARGE_TEMP_C for it to work correctly.
-const uint8_t MAX_DISCHARGE_TEMP_C = 160;        //Celsius
+const uint8_t MAX_CHARGE_TEMP_C = 50;           //Celsius. MAX_DISCHARGE_TEMP_C must be greater than MAX_CHARGE_TEMP_C for it to work correctly.
+const uint8_t MAX_DISCHARGE_TEMP_C = 60;        //Celsius
 const uint16_t MAX_DISCHARGE_CURRENT_mA = 30000;
-const uint16_t MIN_DISCHARGE_CELL_VOLTAGE_mV = 3000;
+const uint16_t MIN_DISCHARGE_CELL_VOLTAGE_mV = 4000;
 const uint16_t MAX_CHARGE_CELL_VOLTAGE_mV = 4200;
 const uint16_t PACK_CHARGE_NOT_COMPLETE_THRESH_mV = 4100;
 
-const uint16_t DETECT_CHARGER_THRESH_mV = 2000;
+const uint16_t DETECT_CHARGER_THRESH_mV = 1500;
 const uint16_t DETECT_TRIGGER_THRESH_mV = 400;
 
 const uint8_t HYSTERESIS_TEMP_C = 3;
@@ -75,7 +75,7 @@ const uint16_t IDLE_SLEEP_TIMEOUT = 938;
 
 /* Length of time to wait while in an error state before going to sleep
  1876*32ms = 60.032s */
-const uint16_t ERROR_SLEEP_TIMEOUT = 1876;
+const uint16_t ERROR_SLEEP_TIMEOUT = 938;
 
 /* Length of time there must be no errors before exiting error state
  94 * 32ms = 3.008s */

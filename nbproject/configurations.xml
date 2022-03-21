@@ -13,6 +13,7 @@
         <itemPath>mcc_generated_files/adc.h</itemPath>
         <itemPath>mcc_generated_files/tmr4.h</itemPath>
         <itemPath>mcc_generated_files/dac.h</itemPath>
+        <itemPath>mcc_generated_files/memory.h</itemPath>
       </logicalFolder>
       <itemPath>isl94208.h</itemPath>
       <itemPath>config.h</itemPath>
@@ -36,6 +37,7 @@
         <itemPath>mcc_generated_files/adc.c</itemPath>
         <itemPath>mcc_generated_files/tmr4.c</itemPath>
         <itemPath>mcc_generated_files/dac.c</itemPath>
+        <itemPath>mcc_generated_files/memory.c</itemPath>
       </logicalFolder>
       <itemPath>main.c</itemPath>
       <itemPath>i2c.c</itemPath>

@@ -9,7 +9,7 @@
 #define	LED_BLINK_PATTERN_H
 
 
-void ledBlinkpattern (uint8_t num_blinks, uint8_t led_color_rgb, uint16_t blink_interval_ms);
+void ledBlinkpattern (uint8_t num_blinks, uint8_t led_color_rgb, uint16_t blink_interval_ms, uint16_t starting_blank_time_ms, uint16_t ending_blank_time_ms);
 void resetLEDBlinkPattern (void);
 
 
