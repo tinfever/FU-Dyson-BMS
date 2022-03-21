@@ -62,6 +62,7 @@ uint8_t thermistor_temp;
 bool charge_complete_flag = false;
 bool full_discharge_flag = false;
 uint16_t discharge_current_mA = 0;
+uint16_t global_pwm_val = 0;
 
 typedef struct {
     uint16_t value;

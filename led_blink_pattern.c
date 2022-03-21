@@ -1,11 +1,12 @@
 #include "main.h"
 #include "led_blink_pattern.h"
+#include "mcc_generated_files/epwm1.h"
 
 
 
+void ledBlinkpattern (uint8_t num_blinks, uint8_t led_color_rgb, uint16_t blink_interval_ms, uint16_t starting_blank_time_ms, uint16_t ending_blank_time_ms, uint16_t pwm_fade_out_slope){       //Example: ledBlinkpattern(8, 0b111); would give 8 white LED blinks
 
-void ledBlinkpattern (uint8_t num_blinks, uint8_t led_color_rgb, uint16_t blink_interval_ms, uint16_t starting_blank_time_ms, uint16_t ending_blank_time_ms){       //Example: ledBlinkpattern(8, 0b111); would give 8 white LED blinks
-
+    
     uint16_t timer_ms = nonblocking_wait_counter.value*32;
     uint16_t on_time = blink_interval_ms;
     uint16_t off_time = blink_interval_ms;
@@ -28,17 +29,17 @@ void ledBlinkpattern (uint8_t num_blinks, uint8_t led_color_rgb, uint16_t blink_
     
     
     //Initialize
-        if (!nonblocking_wait_counter.enable){
-            Set_LED_RGB(0b000, 1023);     //Turn off LED
-            nonblocking_wait_counter.value = 0;
-            nonblocking_wait_counter.enable = 1;
-            max_steps = (2*num_blinks+2)-1;     //Subtract one so it is zero indexed
-            step = 0;
-            next_step_time = starting_blank_time_ms;
-            if (LED_code_cycle_counter.enable){
-                LED_code_cycle_counter.value++;
-            }
+    if (!nonblocking_wait_counter.enable){
+        Set_LED_RGB(0b000, 1023);     //Turn off LED
+        nonblocking_wait_counter.value = 0;
+        nonblocking_wait_counter.enable = 1;
+        max_steps = (2*num_blinks+2)-1;     //Subtract one so it is zero indexed
+        step = 0;
+        next_step_time = starting_blank_time_ms;
+        if (LED_code_cycle_counter.enable){
+            LED_code_cycle_counter.value++;
         }
+    }
     
     if (step == 0 && timer_ms > next_step_time){                        //starting blank time
         step++;
@@ -65,6 +66,18 @@ void ledBlinkpattern (uint8_t num_blinks, uint8_t led_color_rgb, uint16_t blink_
         Set_LED_RGB(led_color_rgb, 1023);     //Turn on LED
         next_step_time += on_time;
     }
+    
+    if (pwm_fade_out_slope > 0 && global_pwm_val > pwm_fade_out_slope){
+        global_pwm_val -= pwm_fade_out_slope;
+        EPWM1_LoadDutyValue(global_pwm_val);
+    }
+    else if (pwm_fade_out_slope > 0 && global_pwm_val <= pwm_fade_out_slope){
+        global_pwm_val = 0;
+        EPWM1_LoadDutyValue(global_pwm_val);
+        
+        nonblocking_wait_counter.value = next_step_time/32; //Shortcut to next LED step
+    }
+    
 }
 
 void resetLEDBlinkPattern (void){

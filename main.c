@@ -53,8 +53,9 @@
 #include "led_blink_pattern.h"
 
 void Set_LED_RGB(uint8_t RGB_en, uint16_t PWM_val){  //Accepts binary input 0b000. Bit 2 = Red Enable. Bit 1 = Green Enable. Bit 0 = Red Enable. R.G.B.
+    global_pwm_val = PWM_val;
     
-    EPWM1_LoadDutyValue(PWM_val);
+    EPWM1_LoadDutyValue(global_pwm_val);
     
     if (RGB_en & 0b001){
         blueLED = 1;
@@ -471,14 +472,19 @@ void cellBalance(void){
 }
 
 void outputEN(void){
+    
+    #define STARTUP_LED_CYCLES_SETTING 2;
+
         if (!ISL_GetSpecificBits_cached(ISL.ENABLE_DISCHARGE_FET)  //If discharge isn't already enabled
             && detect == TRIGGER                       //Trigger is pulled
             && ISL_GetSpecificBits_cached(ISL.WKUP_STATUS) //Make sure WKUP = 1 meaning charger connected or trigger pressed   
             && minCellOK()          //Min cell is not below low voltage cut out of 3V
             && safetyChecks()
                 ){
-                Set_LED_RGB(0b001, 1023); //Blue LED
+                Set_LED_RGB(0b111, 1023); //White LED
                 ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 1);
+                LED_code_cycle_counter.value = 0;
+                LED_code_cycle_counter.enable = true;
         }
         else if (ISL_GetSpecificBits_cached(ISL.ENABLE_DISCHARGE_FET)  //Same as above but we are already discharging and all conditions are good
             && detect == TRIGGER
@@ -486,7 +492,15 @@ void outputEN(void){
             && minCellOK()
             && safetyChecks()
                 ){
-                //do nothing
+                //Fancy start up LEDs
+            
+            if (LED_code_cycle_counter.value <= 3){
+                ledBlinkpattern (1, 0b111, 500, 0, 0, 32);
+            }
+            else {
+                LED_code_cycle_counter.enable = false;
+                Set_LED_RGB(0b001, 1023);
+            }
         }
         else if (!minCellOK()){                                 //If we hit the min cell voltage cut off, prevent discharging battery further until it is put on charger
             full_discharge_flag = true;
@@ -499,9 +513,10 @@ void outputEN(void){
         }
         else if (detect == CHARGER){    //Charger attached while trigger was pulled
             ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);   //Disable discharging
+            LED_code_cycle_counter.value = 0;
             LED_code_cycle_counter.enable = true;
             uint8_t num_blinks = FIRMWARE_VERSION;
-            ledBlinkpattern (num_blinks, 0b111, 500, 1000, 1000);
+            ledBlinkpattern (num_blinks, 0b111, 500, 1000, 1000, 0);
             if (LED_code_cycle_counter.value > 1){       //One LED cycle completed
                 resetLEDBlinkPattern();
                 state = IDLE;
@@ -511,6 +526,12 @@ void outputEN(void){
             ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);   //Disable discharging
             state = IDLE;
         }
+    
+    //State change cleanup
+    if (state != OUTPUT_EN){
+        LED_code_cycle_counter.value = 0;
+    }
+    
 }
 
 void error(void){
@@ -578,18 +599,18 @@ void error(void){
         LED_code_cycle_counter.enable = false;
     }
 
-    if (past_error_reason.ISL_INT_OVERTEMP_FLAG) ledBlinkpattern (4, 0b100, 500, 1000, 1000);
-    else if (past_error_reason.ISL_EXT_OVERTEMP_FLAG) ledBlinkpattern (5, 0b100, 500, 1000, 1000);
-    else if (past_error_reason.ISL_INT_OVERTEMP_PICREAD) ledBlinkpattern (6, 0b100, 500, 1000, 1000);
-    else if (past_error_reason.THERMISTOR_OVERTEMP_PICREAD) ledBlinkpattern (7, 0b100, 500, 1000, 1000);
-    else if (past_error_reason.CHARGE_OC_FLAG) ledBlinkpattern (8, 0b100, 500, 1000, 1000);
-    else if (past_error_reason.DISCHARGE_OC_FLAG) ledBlinkpattern (9, 0b100, 500, 1000, 1000);
-    else if (past_error_reason.DISCHARGE_SC_FLAG) ledBlinkpattern (10, 0b100, 500, 1000, 1000);
-    else if (past_error_reason.DISCHARGE_OC_SHUNT_PICREAD) ledBlinkpattern (11, 0b100, 500, 1000, 1000);
-    else if (past_error_reason.CHARGE_ISL_INT_OVERTEMP_PICREAD) ledBlinkpattern (12, 0b100, 500, 1000, 1000);
-    else if (past_error_reason.CHARGE_THERMISTOR_OVERTEMP_PICREAD) ledBlinkpattern (13, 0b100, 500, 1000, 1000);
-    else if (full_discharge_trigger_error) ledBlinkpattern (3, 0b001, 500, 0, 0);       //trigger is pulled but battery is low
-    else ledBlinkpattern (20, 0b100, 500, 1000, 1000);                                                                  //Unidentified Error
+    if (past_error_reason.ISL_INT_OVERTEMP_FLAG) ledBlinkpattern (4, 0b100, 500, 1000, 1000, 0);
+    else if (past_error_reason.ISL_EXT_OVERTEMP_FLAG) ledBlinkpattern (5, 0b100, 500, 1000, 1000, 0);
+    else if (past_error_reason.ISL_INT_OVERTEMP_PICREAD) ledBlinkpattern (6, 0b100, 500, 1000, 1000, 0);
+    else if (past_error_reason.THERMISTOR_OVERTEMP_PICREAD) ledBlinkpattern (7, 0b100, 500, 1000, 1000, 0);
+    else if (past_error_reason.CHARGE_OC_FLAG) ledBlinkpattern (8, 0b100, 500, 1000, 1000, 0);
+    else if (past_error_reason.DISCHARGE_OC_FLAG) ledBlinkpattern (9, 0b100, 500, 1000, 1000, 0);
+    else if (past_error_reason.DISCHARGE_SC_FLAG) ledBlinkpattern (10, 0b100, 500, 1000, 1000, 0);
+    else if (past_error_reason.DISCHARGE_OC_SHUNT_PICREAD) ledBlinkpattern (11, 0b100, 500, 1000, 1000, 0);
+    else if (past_error_reason.CHARGE_ISL_INT_OVERTEMP_PICREAD) ledBlinkpattern (12, 0b100, 500, 1000, 1000, 0);
+    else if (past_error_reason.CHARGE_THERMISTOR_OVERTEMP_PICREAD) ledBlinkpattern (13, 0b100, 500, 1000, 1000, 0);
+    else if (full_discharge_trigger_error) ledBlinkpattern (3, 0b001, 500, 0, 0, 0);       //trigger is pulled but battery is low
+    else ledBlinkpattern (20, 0b100, 500, 1000, 1000, 0);                                                                  //Unidentified Error
     
     
     
