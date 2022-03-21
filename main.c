@@ -52,26 +52,29 @@
 #include "thermistor.h"
 #include "led_blink_pattern.h"
 
-void Set_LED_RGB(uint8_t RGB){  //Accepts binary input 0b000. Bit 2 = Red Enable. Bit 1 = Green Enable. Bit 0 = Red Enable. R.G.B.
-    if (RGB & 0b001){
-        blueLED = 0;
-    }
-    else{
+void Set_LED_RGB(uint8_t RGB_en, uint16_t PWM_val){  //Accepts binary input 0b000. Bit 2 = Red Enable. Bit 1 = Green Enable. Bit 0 = Red Enable. R.G.B.
+    
+    EPWM1_LoadDutyValue(PWM_val);
+    
+    if (RGB_en & 0b001){
         blueLED = 1;
     }
-    
-    if (RGB & 0b010){
-        greenLED = 0;
-    }
     else{
+        blueLED = 0;
+    }
+    
+    if (RGB_en & 0b010){
         greenLED = 1;
     }
+    else{
+        greenLED = 0;
+    }
     
-    if (RGB & 0b100){
-        redLED = 0;
+    if (RGB_en & 0b100){
+        redLED = 1;
     }
     else{
-        redLED = 1;
+        redLED = 0;
     }
 }
 
@@ -268,13 +271,13 @@ void init(void){
     DAC_SetOutput(0);   //Make sure DAC output is 0V = VSS
     
     /* Initialize LEDS */
-    redLED = 1;  //Set high to default RED led to off
-    greenLED = 1;  //Set high to default GREEN led to off
-    blueLED = 1;  //Set high to default BLUE led to off
-    TRISB3 = 0; // Set greenLED as output
-    TRISA6 = 0; //Set blueLED as output
-    TRISA7 = 0; //Set redLED as output
-    ANSB3 = 0; //Set Green LED as digital. Red and Blue are always digital.
+//    redLED = 1;  //Set high to default RED led to off
+//    greenLED = 1;  //Set high to default GREEN led to off
+//    blueLED = 1;  //Set high to default BLUE led to off
+//    TRISB3 = 0; // Set greenLED as output
+//    TRISA6 = 0; //Set blueLED as output
+//    TRISA7 = 0; //Set redLED as output
+//    ANSB3 = 0; //Set Green LED as digital. Red and Blue are always digital.
 
     /* Immediately start yellow LED so we know board is alive */
     //Set_LED_RGB(0b110);
@@ -348,17 +351,17 @@ void idle(void){
                 charge_complete_flag = true;
             }
     else if (detect == CHARGER && charge_complete_flag){    //Pack on charger and charge is complete = Green LED
-        Set_LED_RGB(0b010); //LED Green
+        Set_LED_RGB(0b010, 1023); //LED Green
     }
     else if (detect == CHARGER && ISL_GetSpecificBits_cached(ISL.WKUP_STATUS)) {                           //Pack on charger but charge isn't complete and we aren't in a charging or error state = Yellow LED, undefined state
-        Set_LED_RGB(0b110); //LED Yellow
+        Set_LED_RGB(0b110, 1023); //LED Yellow
     }
     else if (detect == NONE){                               //No trigger or charger, pack is awake and idle = Green LED
-        Set_LED_RGB(0b010); //LED Green
+        Set_LED_RGB(0b010, 1023); //LED Green
     }
     else if (detect == TRIGGER && ISL_GetSpecificBits_cached(ISL.WKUP_STATUS) && !full_discharge_flag){    //trigger is pulled but we didn't enable output, and it isn't because there was an error or the pack is fully discharged = Yellow LED
             //There is a delay inside ISL IC between when detect == TRIGGER and when WKUP == 1. adding && WKUP_STATUS make sure both are in the same state to avoid brief yellow LED flash.
-        Set_LED_RGB(0b110); //LED Yellow    
+        Set_LED_RGB(0b110, 1023); //LED Yellow    
     }
     
     //There is no handling for WKUP_STATUS and DETECT to be in different states. If WKUP_STATUS == 0 (don't wakeup) but DETECT == TRIGGER, God help us all.
@@ -404,7 +407,7 @@ void charging(void){
             charge_duration_counter.enable = true;          //Start charge timer
             ISL_SetSpecificBits(ISL.ENABLE_CHARGE_FET, 1);  //Enable Charging
             full_discharge_flag = false;                    //Clear full discharge flag once we start charging
-            Set_LED_RGB(0b001); //Blue LED
+            Set_LED_RGB(0b001, 1023); //Blue LED
     }
     else if (ISL_GetSpecificBits_cached(ISL.ENABLE_CHARGE_FET)     //same as above but we are already charging and all conditions are good
         && detect == CHARGER
@@ -441,7 +444,7 @@ void charging(void){
 }
 
 void chargingWait(void){
-    Set_LED_RGB(0b111); //White LED
+    Set_LED_RGB(0b111, 1023); //White LED
     if (!charge_wait_counter.enable){   //if counter isn't enabled, clear and enable it.
         charge_wait_counter.value = 0;
         charge_wait_counter.enable = true;  //Clear and start charge wait counter
@@ -474,7 +477,7 @@ void outputEN(void){
             && minCellOK()          //Min cell is not below low voltage cut out of 3V
             && safetyChecks()
                 ){
-                Set_LED_RGB(0b001); //Blue LED
+                Set_LED_RGB(0b001, 1023); //Blue LED
                 ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 1);
         }
         else if (ISL_GetSpecificBits_cached(ISL.ENABLE_DISCHARGE_FET)  //Same as above but we are already discharging and all conditions are good
@@ -493,6 +496,16 @@ void outputEN(void){
         else if (!safetyChecks()){
                 ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);   //Disable discharging
                 state = ERROR;
+        }
+        else if (detect == CHARGER){    //Charger attached while trigger was pulled
+            ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);   //Disable discharging
+            LED_code_cycle_counter.enable = true;
+            uint8_t num_blinks = FIRMWARE_VERSION;
+            ledBlinkpattern (num_blinks, 0b111, 500, 1000, 1000);
+            if (LED_code_cycle_counter.value > 1){       //One LED cycle completed
+                resetLEDBlinkPattern();
+                state = IDLE;
+            }
         }
         else {                                                  //Trigger released; WKUP status = 1
             ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);   //Disable discharging

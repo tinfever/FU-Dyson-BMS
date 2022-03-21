@@ -29,7 +29,7 @@ void ledBlinkpattern (uint8_t num_blinks, uint8_t led_color_rgb, uint16_t blink_
     
     //Initialize
         if (!nonblocking_wait_counter.enable){
-            Set_LED_RGB(0b000);     //Turn off LED
+            Set_LED_RGB(0b000, 1023);     //Turn off LED
             nonblocking_wait_counter.value = 0;
             nonblocking_wait_counter.enable = 1;
             max_steps = (2*num_blinks+2)-1;     //Subtract one so it is zero indexed
@@ -42,33 +42,33 @@ void ledBlinkpattern (uint8_t num_blinks, uint8_t led_color_rgb, uint16_t blink_
     
     if (step == 0 && timer_ms > next_step_time){                        //starting blank time
         step++;
-        Set_LED_RGB(led_color_rgb);     //Turn on LED
+        Set_LED_RGB(led_color_rgb, 1023);     //Turn on LED
         next_step_time += on_time;
     }
     else if (step == max_steps-1 && timer_ms > next_step_time){         //ending blank time
         step++;
-        Set_LED_RGB(0b000);     //Turn off LED
+        Set_LED_RGB(0b000, 1023);     //Turn off LED
         next_step_time += ending_blank_time_ms;
     }
     else if (step == max_steps && timer_ms > next_step_time){           //cycle complete
-        Set_LED_RGB(0b000);     //Turn off LED
+        Set_LED_RGB(0b000, 1023);     //Turn off LED
         nonblocking_wait_counter.enable = 0;
         nonblocking_wait_counter.value = 0;
     }
     else if (step % 2 != 0 && timer_ms > next_step_time){        //Step number is odd
         step++;
-        Set_LED_RGB(0b000);     //Turn off LED
+        Set_LED_RGB(0b000, 1023);     //Turn off LED
         next_step_time += off_time;
     }
     else if (step % 2 == 0 && timer_ms > next_step_time){       //Step number is even
         step++;
-        Set_LED_RGB(led_color_rgb);     //Turn on LED
+        Set_LED_RGB(led_color_rgb, 1023);     //Turn on LED
         next_step_time += on_time;
     }
 }
 
 void resetLEDBlinkPattern (void){
-    Set_LED_RGB(0b000);     //Turn off LED
+    Set_LED_RGB(0b000, 1023);     //Turn off LED
     nonblocking_wait_counter.enable = false;
     nonblocking_wait_counter.value = 0;
     LED_code_cycle_counter.enable = false;

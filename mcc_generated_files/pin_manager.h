@@ -117,6 +117,22 @@
 #define ISL_AnalogOut_AN4_SetAnalogMode()      do { ANSELAbits.ANSA4 = 1; } while(0)
 #define ISL_AnalogOut_AN4_SetDigitalMode()     do { ANSELAbits.ANSA4 = 0; } while(0)
 
+// get/set RA6 procedures
+#define RA6_SetHigh()            do { LATAbits.LATA6 = 1; } while(0)
+#define RA6_SetLow()             do { LATAbits.LATA6 = 0; } while(0)
+#define RA6_Toggle()             do { LATAbits.LATA6 = ~LATAbits.LATA6; } while(0)
+#define RA6_GetValue()              PORTAbits.RA6
+#define RA6_SetDigitalInput()    do { TRISAbits.TRISA6 = 1; } while(0)
+#define RA6_SetDigitalOutput()   do { TRISAbits.TRISA6 = 0; } while(0)
+
+// get/set RA7 procedures
+#define RA7_SetHigh()            do { LATAbits.LATA7 = 1; } while(0)
+#define RA7_SetLow()             do { LATAbits.LATA7 = 0; } while(0)
+#define RA7_Toggle()             do { LATAbits.LATA7 = ~LATAbits.LATA7; } while(0)
+#define RA7_GetValue()              PORTAbits.RA7
+#define RA7_SetDigitalInput()    do { TRISAbits.TRISA7 = 1; } while(0)
+#define RA7_SetDigitalOutput()   do { TRISAbits.TRISA7 = 0; } while(0)
+
 // get/set SV09Check_AN10 aliases
 #define SV09Check_AN10_TRIS                 TRISBbits.TRISB2
 #define SV09Check_AN10_LAT                  LATBbits.LATB2
@@ -133,6 +149,18 @@
 #define SV09Check_AN10_ResetPullup()        do { WPUBbits.WPUB2 = 0; } while(0)
 #define SV09Check_AN10_SetAnalogMode()      do { ANSELBbits.ANSB2 = 1; } while(0)
 #define SV09Check_AN10_SetDigitalMode()     do { ANSELBbits.ANSB2 = 0; } while(0)
+
+// get/set RB3 procedures
+#define RB3_SetHigh()            do { LATBbits.LATB3 = 1; } while(0)
+#define RB3_SetLow()             do { LATBbits.LATB3 = 0; } while(0)
+#define RB3_Toggle()             do { LATBbits.LATB3 = ~LATBbits.LATB3; } while(0)
+#define RB3_GetValue()              PORTBbits.RB3
+#define RB3_SetDigitalInput()    do { TRISBbits.TRISB3 = 1; } while(0)
+#define RB3_SetDigitalOutput()   do { TRISBbits.TRISB3 = 0; } while(0)
+#define RB3_SetPullup()             do { WPUBbits.WPUB3 = 1; } while(0)
+#define RB3_ResetPullup()           do { WPUBbits.WPUB3 = 0; } while(0)
+#define RB3_SetAnalogMode()         do { ANSELBbits.ANSB3 = 1; } while(0)
+#define RB3_SetDigitalMode()        do { ANSELBbits.ANSB3 = 0; } while(0)
 
 // get/set ChrgDetect_AN7 aliases
 #define ChrgDetect_AN7_TRIS                 TRISBbits.TRISB5

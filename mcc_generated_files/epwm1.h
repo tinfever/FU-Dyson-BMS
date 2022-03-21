@@ -1,26 +1,24 @@
 /**
-  Generated Pin Manager File
+  EPWM1 Generated Driver File
 
-  Company:
+  @Company
     Microchip Technology Inc.
 
-  File Name:
-    pin_manager.c
+  @File Name
+    epwm1.h
 
-  Summary:
-    This is the Pin Manager file generated using PIC10 / PIC12 / PIC16 / PIC18 MCUs
+  @Summary
+    This is the generated driver implementation file for the EPWM1 driver using PIC10 / PIC12 / PIC16 / PIC18 MCUs
 
-  Description:
-    This header file provides implementations for pin APIs for all pins selected in the GUI.
+  @Description
+    This header file provides implementations for driver APIs for EPWM1.
     Generation Information :
         Product Revision  :  PIC10 / PIC12 / PIC16 / PIC18 MCUs - 1.81.7
         Device            :  PIC16LF1847
-        Driver Version    :  2.11
+        Driver Version    :  2.01
     The generated drivers are tested against the following:
         Compiler          :  XC8 2.31 and above
         MPLAB             :  MPLAB X 5.45
-
-    Copyright (c) 2013 - 2015 released Microchip Technology Inc.  All rights reserved.
 */
 
 /*
@@ -46,57 +44,90 @@
     SOFTWARE.
 */
 
-#include "pin_manager.h"
+#ifndef EPWM1_H
+#define EPWM1_H
 
+/**
+  Section: Included Files
+*/
 
+#include <xc.h>
+#include <stdint.h>
 
+#ifdef __cplusplus  // Provide C++ Compatibility
 
+    extern "C" {
 
-void PIN_MANAGER_Initialize(void)
-{
-    /**
-    LATx registers
-    */
-    LATA = 0xC0;
-    LATB = 0x08;
+#endif
 
-    /**
-    TRISx registers
-    */
-    TRISA = 0x3F;
-    TRISB = 0xF7;
+/**
+  Section: EPWM Module APIs
+*/
 
-    /**
-    ANSELx registers
-    */
-    ANSELB = 0xF6;
-    ANSELA = 0x1F;
+/**
+  @Summary
+    Initializes the EPWM1
 
-    /**
-    WPUx registers
-    */
-    WPUB = 0x00;
-    WPUA = 0x00;
-    OPTION_REGbits.nWPUEN = 1;
+  @Description
+    This routine initializes the EPWM1 module.
+    This routine must be called before any other EPWM1 routine is called.
+    This routine should only be called once during system initialization.
 
+  @Preconditions
+    None
 
-    /**
-    APFCONx registers
-    */
-    APFCON0 = 0x0E;
-    APFCON1 = 0x00;
+  @Param
+    None
 
+  @Returns
+    None
 
-
-
-   
+  @Comment
     
-}
-  
-void PIN_MANAGER_IOC(void)
-{   
-}
 
+ @Example
+    <code>
+    uint16_t dutycycle;
+
+    ECCP1_Initialize();
+	EPWM1_LoadDutyValue(dutycycle);
+    </code>
+ */
+void EPWM1_Initialize(void);
+
+/**
+  @Summary
+    Loads 16-bit duty cycle.
+
+  @Description
+    This routine loads the 16 bit duty cycle value.
+
+  @Preconditions
+    EPWM1_Initialize() function should have been called before calling this function.
+
+  @Param
+    Pass 16bit duty cycle value.
+
+  @Returns
+    None
+
+  @Example
+    <code>
+    uint16_t dutycycle;
+
+    EPWM1_Initialize();
+    EPWM1_LoadDutyValue(dutycycle);
+    </code>
+*/
+void EPWM1_LoadDutyValue(uint16_t dutyValue);
+        
+#ifdef __cplusplus  // Provide C++ Compatibility
+
+    }
+
+#endif
+
+#endif	//EPWM1_H
 /**
  End of File
 */

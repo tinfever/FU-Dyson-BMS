@@ -82,7 +82,7 @@ counter_t LED_code_cycle_counter = {0,0};
 
 uint16_t readADCmV(adc_channel_t channel);
 void setErrorReasonFlags(volatile error_reason_t *datastore);
-void Set_LED_RGB(uint8_t RGB);
+void Set_LED_RGB(uint8_t RGB, uint16_t PWM_val);
 
 
 

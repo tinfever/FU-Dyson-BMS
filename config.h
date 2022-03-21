@@ -8,6 +8,10 @@
 #ifndef CONFIG_H
 #define	CONFIG_H
 
+#include <xc.h>
+#include "mcc_generated_files/epwm1.h"
+
+#define FIRMWARE_VERSION 1;
 
 //Uncomment these lines while in debug mode to disable certain temperature checks for testing.
 #ifdef __DEBUG  //Make sure these only work in debug mode
@@ -15,9 +19,9 @@
 //#define __DEBUG_DISABLE_PIC_ISL_INT_READ          //Uncomment for testing
 #endif
 
-#define redLED RA7
-#define greenLED RB3
-#define blueLED RA6
+#define redLED PSTR1CONbits.STR1C
+#define greenLED PSTR1CONbits.STR1A
+#define blueLED PSTR1CONbits.STR1D
 
 #define SDA RB1
 #define SCL RB4
@@ -25,6 +29,11 @@
 #define TRIS_SCL TRISB4
 #define ANS_SDA ANSB1
 #define ANS_SCL ANSB4
+//#define LED_PWM_STEER PSTR1CONbits.STR1D;     //assign four bits. 1101.
+//Bit 3 = P1D = RA6 = BLUE
+//Bit 2 = P1C = RA7 = RED
+//Bit 1 = P1B = DON'T USE
+//Bit 0 = P1A = RB3 = GREEN
 
 #define ISL_ADDR 0x50
 

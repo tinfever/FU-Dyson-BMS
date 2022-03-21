@@ -52,8 +52,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <conio.h>
+#include "epwm1.h"
 #include "tmr4.h"
 #include "memory.h"
+#include "tmr2.h"
 #include "dac.h"
 #include "adc.h"
 
