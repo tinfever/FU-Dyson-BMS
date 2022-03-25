@@ -4,12 +4,10 @@
 
 
 
-void ledBlinkpattern (uint8_t num_blinks, uint8_t led_color_rgb, uint16_t blink_interval_ms, uint16_t starting_blank_time_ms, uint16_t ending_blank_time_ms, uint16_t pwm_fade_out_slope){       //Example: ledBlinkpattern(8, 0b111); would give 8 white LED blinks
+void ledBlinkpattern (uint8_t num_blinks, uint8_t led_color_rgb, uint16_t blink_on_time_ms, uint16_t blink_off_time_ms, uint16_t starting_blank_time_ms, uint16_t ending_blank_time_ms, uint16_t pwm_fade_out_slope){       //Example: ledBlinkpattern(8, 0b111); would give 8 white LED blinks
 
     
     uint16_t timer_ms = nonblocking_wait_counter.value*32;
-    uint16_t on_time = blink_interval_ms;
-    uint16_t off_time = blink_interval_ms;
     
     static uint8_t max_steps = 0; 
     static uint8_t step = 0;
@@ -44,7 +42,7 @@ void ledBlinkpattern (uint8_t num_blinks, uint8_t led_color_rgb, uint16_t blink_
     if (step == 0 && timer_ms > next_step_time){                        //starting blank time
         step++;
         Set_LED_RGB(led_color_rgb, 1023);     //Turn on LED
-        next_step_time += on_time;
+        next_step_time += blink_on_time_ms;
     }
     else if (step == max_steps-1 && timer_ms > next_step_time){         //ending blank time
         step++;
@@ -59,22 +57,20 @@ void ledBlinkpattern (uint8_t num_blinks, uint8_t led_color_rgb, uint16_t blink_
     else if (step % 2 != 0 && timer_ms > next_step_time){        //Step number is odd
         step++;
         Set_LED_RGB(0b000, 1023);     //Turn off LED
-        next_step_time += off_time;
+        next_step_time += blink_off_time_ms;
     }
     else if (step % 2 == 0 && timer_ms > next_step_time){       //Step number is even
         step++;
         Set_LED_RGB(led_color_rgb, 1023);     //Turn on LED
-        next_step_time += on_time;
+        next_step_time += blink_on_time_ms;
     }
     
-    if (pwm_fade_out_slope > 0 && global_pwm_val > pwm_fade_out_slope){
-        global_pwm_val -= pwm_fade_out_slope;
-        EPWM1_LoadDutyValue(global_pwm_val);
+    uint16_t current_pwm = EPWM1_ReadDutyValue();
+    if (pwm_fade_out_slope > 0 && current_pwm > pwm_fade_out_slope){
+        EPWM1_LoadDutyValue(current_pwm - pwm_fade_out_slope);
     }
-    else if (pwm_fade_out_slope > 0 && global_pwm_val <= pwm_fade_out_slope){
-        global_pwm_val = 0;
-        EPWM1_LoadDutyValue(global_pwm_val);
-        
+    else if (pwm_fade_out_slope > 0 && current_pwm <= pwm_fade_out_slope){
+        EPWM1_LoadDutyValue(0);
         nonblocking_wait_counter.value = next_step_time/32; //Shortcut to next LED step
     }
     

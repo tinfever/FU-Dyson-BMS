@@ -95,6 +95,12 @@ void EPWM1_LoadDutyValue(uint16_t dutyValue)
    // Writing to 2 LSBs of pwm duty cycle in CCPCON register
     CCP1CON = ((uint8_t)(CCP1CON & 0xCF) | ((dutyValue & 0x0003)<<4));
 }
+
+uint16_t EPWM1_ReadDutyValue(void){
+    return (uint16_t)(CCPR1L << 2) | (uint16_t)((CCP1CON & 0b00110000) >> 4);
+    
+}
+
 /**
  End of File
 */

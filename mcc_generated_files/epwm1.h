@@ -121,6 +121,8 @@ void EPWM1_Initialize(void);
 */
 void EPWM1_LoadDutyValue(uint16_t dutyValue);
         
+uint16_t EPWM1_ReadDutyValue(void);
+
 #ifdef __cplusplus  // Provide C++ Compatibility
 
     }

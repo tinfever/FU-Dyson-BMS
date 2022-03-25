@@ -10,7 +10,7 @@ void ISL_Init(void){
     ISL_SetSpecificBits(ISL.FORCE_POR, 1);                          //Make sure the ISL is clean reset
     __delay_ms(5);      //Wait for things to settle. This isn't in the datasheet but if you send I2C write too soon after POR, the writes won't happen.
     ISL_SetSpecificBits((uint8_t[]){WriteEnable, 5, 3}, 0b111);     //We likely need to enable register writes again
-    /* 0 = Auto OC discharge control enabled
+    /* 0 = Auto OC discharge control enabledl
      00 =  100mV OC threshold / 2mOhm shunt = 50A OC trip. Can't set it any lower, even though PCB fuse is 30A.
      0 = Auto SC discharge control enabled
      00 = 2mOhm shunt @ 200mV SC threshold = 100A short circuit trip. Can't set any lower.
