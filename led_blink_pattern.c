@@ -79,6 +79,13 @@ void ledBlinkpattern (uint8_t num_blinks, uint8_t led_color_rgb, uint16_t blink_
         else if (current_pwm <= -pwm_fade_slope){
             EPWM1_LoadDutyValue(0);
             nonblocking_wait_counter.value = next_step_time/32; //Shortcut to next LED step
+                        if (num_blinks == 1){                           //If there is only one blink in the cycle, and the PWM fade is done, do all the clean up procedures immediately to avoid brief LED blank time
+                nonblocking_wait_counter.enable = 0;
+                nonblocking_wait_counter.value = 0;
+                if (LED_code_cycle_counter.enable){
+                    LED_code_cycle_counter.value++;
+                }
+            }
         }
     }
     else if (pwm_fade_slope > 0){                               //Fade in
@@ -87,10 +94,16 @@ void ledBlinkpattern (uint8_t num_blinks, uint8_t led_color_rgb, uint16_t blink_
         }
         else if (current_pwm + pwm_fade_slope >= 1023){
             EPWM1_LoadDutyValue(1023);
-            nonblocking_wait_counter.value = next_step_time/32; //Shortcut to next LED step
+            nonblocking_wait_counter.value = (next_step_time/32)+1; //Shortcut to next LED step
+            if (num_blinks == 1){                           //If there is only one blink in the cycle, and the PWM fade is done, do all the clean up procedures immediately to avoid brief LED blank time
+                nonblocking_wait_counter.enable = 0;
+                nonblocking_wait_counter.value = 0;
+                if (LED_code_cycle_counter.enable){
+                    LED_code_cycle_counter.value++;
+                }
+            }
         }
-        
-        
+
     }
     
 }

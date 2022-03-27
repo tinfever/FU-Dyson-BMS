@@ -473,7 +473,7 @@ void cellBalance(void){
 }
 
 void outputEN(void){
-    static bool runonce = 0;
+    static uint8_t startup_led_step = 0;
 
         if (!ISL_GetSpecificBits_cached(ISL.ENABLE_DISCHARGE_FET)  //If discharge isn't already enabled
             && detect == TRIGGER                       //Trigger is pulled
@@ -492,16 +492,40 @@ void outputEN(void){
             && safetyChecks()
                 ){
                 //Fancy start up LEDs
-            if (!runonce){
-                LED_code_cycle_counter.enable = true;
-                ledBlinkpattern (3, 0b001, 1000, 0, 0, 0, 16);
-                if (LED_code_cycle_counter.value > 1){
-                    runonce = 1;
-                    resetLEDBlinkPattern();
-                }
-            }
-            else {
-                Set_LED_RGB(0b001, 1023);
+                switch(startup_led_step){
+                    case 0:
+                        LED_code_cycle_counter.enable = true;
+                        ledBlinkpattern (1, 0b100, 1000, 0, 0, 0, 32);
+                        if (LED_code_cycle_counter.value > 1){
+                            startup_led_step++;
+                            resetLEDBlinkPattern();
+                        }
+                        break;
+
+                    case 1:
+                        LED_code_cycle_counter.enable = true;
+                        ledBlinkpattern (1, 0b010, 1000, 0, 0, 0, 32);
+                        if (LED_code_cycle_counter.value > 1){
+                            startup_led_step++;
+                            resetLEDBlinkPattern();
+                        }
+                        break;
+
+                    case 2: 
+                        LED_code_cycle_counter.enable = true;
+                        ledBlinkpattern (1, 0b001, 1000, 0, 0, 0, 127);
+                        if (LED_code_cycle_counter.value > 1){
+                            startup_led_step++;
+                            nonblocking_wait_counter.enable = false;        //Same as resetLEDBlinkPattern but without turning off the LED
+                            nonblocking_wait_counter.value = 0;
+                            LED_code_cycle_counter.enable = false;
+                            LED_code_cycle_counter.value = 0;
+                        }
+                        break;
+
+                        default:
+                            Set_LED_RGB(0b001, 1023);
+                            break;
             }
         }
         else if (!minCellOK()){                                 //If we hit the min cell voltage cut off, prevent discharging battery further until it is put on charger
@@ -530,7 +554,7 @@ void outputEN(void){
     
     //State change cleanup
     if (state != OUTPUT_EN){
-        runonce = 0;
+        startup_led_step = 0;
         resetLEDBlinkPattern();
     }
     
