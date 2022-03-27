@@ -94,6 +94,8 @@ const uint8_t ERROR_EXIT_TIMEOUT = 94;
  Ensures the error code won't immediately go away once the user stops pulling the trigger.*/
 const uint8_t NUM_OF_LED_CODES_AFTER_FAULT_CLEAR = 3;
 
+//Comment this line out to disable the cell voltage rolling average
+#define ENABLE_CELL_VOLTAGE_ROLLING_AVERAGE
 /* Number of samples to include in the cell voltage rolling averaging*/
 #define CELLVOLTAGE_AVERAGE_WINDOW_SIZE 4
 

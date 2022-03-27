@@ -494,7 +494,7 @@ void outputEN(void){
                 //Fancy start up LEDs
             if (!runonce){
                 LED_code_cycle_counter.enable = true;
-                ledBlinkpattern (3, 0b001, 1000, 0, 0, 0, 64);
+                ledBlinkpattern (3, 0b001, 1000, 0, 0, 0, 16);
                 if (LED_code_cycle_counter.value > 1){
                     runonce = 1;
                     resetLEDBlinkPattern();
@@ -755,11 +755,6 @@ void main(void)
 //            ISL_Read_Register(i);
 //        }
 //        #endif
-        
-
-
-
-
         
         
     }
