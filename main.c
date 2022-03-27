@@ -473,8 +473,6 @@ void cellBalance(void){
 }
 
 void outputEN(void){
-    
-    #define STARTUP_LED_CYCLES_SETTING 2;
     static bool runonce = 0;
 
         if (!ISL_GetSpecificBits_cached(ISL.ENABLE_DISCHARGE_FET)  //If discharge isn't already enabled
@@ -496,7 +494,7 @@ void outputEN(void){
                 //Fancy start up LEDs
             if (!runonce){
                 LED_code_cycle_counter.enable = true;
-                ledBlinkpattern (3, 0b111, 1000, 0, 0, 0, 32);
+                ledBlinkpattern (3, 0b001, 1000, 0, 0, 0, 64);
                 if (LED_code_cycle_counter.value > 1){
                     runonce = 1;
                     resetLEDBlinkPattern();

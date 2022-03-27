@@ -1,5 +1,5 @@
 #include "isl94208.h"
-#include "config.h"
+
 
 //Private functions
 static uint8_t _GenerateMask(uint8_t length);
@@ -31,12 +31,12 @@ void ISL_Init(void){
 }
 
 uint8_t ISL_Read_Register(isl_reg_t reg){  //Allows easily retrieving an entire register. Ex. ISL_Read_Register(ISL_CONFIG_REG); result = ISL_RegData[Config]
-    I2C_ERROR_FLAGS |= I2C1_ReadMemory(ISL_ADDR, reg, &ISL_RegData[reg], 1);
+    I2C_ERROR_FLAGS |= I2C1_ReadMemory(ISL_I2C_ADDR, reg, &ISL_RegData[reg], 1);
     return ISL_RegData[reg];
 }
 
 void ISL_Write_Register(isl_reg_t reg, uint8_t wrdata){
-     I2C_ERROR_FLAGS |= I2C1_WriteMemory(ISL_ADDR, reg, &wrdata, 1);
+     I2C_ERROR_FLAGS |= I2C1_WriteMemory(ISL_I2C_ADDR, reg, &wrdata, 1);
      #ifdef __DEBUG
     ISL_Read_Register(reg);    //Re-read the I2C register so we can confirm any changes by watching variable values in debug.
     #endif
@@ -87,12 +87,30 @@ uint16_t ISL_GetAnalogOutmV(isl_analogout_t value){
 }
 
 void ISL_ReadAllCellVoltages(void){
-    CellVoltages[1] = ISL_GetAnalogOutmV(AO_VCELL1)*2; //Cell voltages have to be multiplied by two since ISL scales them down by two.
-    CellVoltages[2] = ISL_GetAnalogOutmV(AO_VCELL2)*2;
-    CellVoltages[3] = ISL_GetAnalogOutmV(AO_VCELL3)*2;
-    CellVoltages[4] = ISL_GetAnalogOutmV(AO_VCELL4)*2;
-    CellVoltages[5] = ISL_GetAnalogOutmV(AO_VCELL5)*2;
-    CellVoltages[6] = ISL_GetAnalogOutmV(AO_VCELL6)*2;
+    //Added rolling average to tolerate brief voltage dips during startup using marginal battery cells
+    //This might not actually matter much depending on how large the inrush current is on the vacuum and how poor health the battery cells are.
+    
+    static uint8_t num_iterations = 1;
+    
+    CellVoltageHistory[OldestVoltageIndex][1] = ISL_GetAnalogOutmV(AO_VCELL1)*2; //Cell voltages have to be multiplied by two since ISL scales them down by two.
+    CellVoltageHistory[OldestVoltageIndex][2] = ISL_GetAnalogOutmV(AO_VCELL2)*2;
+    CellVoltageHistory[OldestVoltageIndex][3] = ISL_GetAnalogOutmV(AO_VCELL3)*2;
+    CellVoltageHistory[OldestVoltageIndex][4] = ISL_GetAnalogOutmV(AO_VCELL4)*2;
+    CellVoltageHistory[OldestVoltageIndex][5] = ISL_GetAnalogOutmV(AO_VCELL5)*2;
+    CellVoltageHistory[OldestVoltageIndex][6] = ISL_GetAnalogOutmV(AO_VCELL6)*2;
+    
+    for (uint8_t cell = 1; cell <= 6; cell++){
+        uint16_t sum = 0;
+        for (uint8_t datapoint = 0; datapoint < CELLVOLTAGE_AVERAGE_WINDOW_SIZE; datapoint++){
+            sum += CellVoltageHistory[datapoint][cell];
+        }
+        CellVoltages[cell] = sum/(num_iterations);      //num_iterations will increment up to WINDOW_SIZE. This ensures that during startup, when some of the historical data points are zero, they aren't included in the average causing an instant undervoltage cutout.
+
+    }    
+    OldestVoltageIndex = (OldestVoltageIndex + 1) % CELLVOLTAGE_AVERAGE_WINDOW_SIZE;
+    if (num_iterations < CELLVOLTAGE_AVERAGE_WINDOW_SIZE){
+        num_iterations++;
+    }
 }
 
 void ISL_calcCellStats(void){

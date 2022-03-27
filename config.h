@@ -35,7 +35,7 @@
 //Bit 1 = P1B = DON'T USE
 //Bit 0 = P1A = RB3 = GREEN
 
-#define ISL_ADDR 0x50
+#define ISL_I2C_ADDR 0x50
 
 /*ADC Channels, Defined in adc.h
      Discharge_Isense_AN0 =     0x0,
@@ -94,7 +94,8 @@ const uint8_t ERROR_EXIT_TIMEOUT = 94;
  Ensures the error code won't immediately go away once the user stops pulling the trigger.*/
 const uint8_t NUM_OF_LED_CODES_AFTER_FAULT_CLEAR = 3;
 
-
+/* Number of samples to include in the cell voltage rolling averaging*/
+#define CELLVOLTAGE_AVERAGE_WINDOW_SIZE 4
 
 
 

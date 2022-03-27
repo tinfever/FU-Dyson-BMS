@@ -9,6 +9,7 @@
 #define	ISL94208_H
 #include "mcc_generated_files/mcc.h"
 #include "i2c.h"
+#include "config.h"
 
 typedef enum {
     Config = 0x00,
@@ -28,6 +29,10 @@ uint8_t ISL_RegData[__ISL_NUMBER_OF_REG] = {0};
 i2c_result_t I2C_ERROR_FLAGS = 0;
 
 uint16_t CellVoltages[7] = {0}; //Array for cell voltages. We'll just ignore index 0 and use indexes 1-6 for cells 1-6
+
+
+uint16_t CellVoltageHistory[CELLVOLTAGE_AVERAGE_WINDOW_SIZE][7] = {0};
+uint8_t OldestVoltageIndex = 0;
 
 enum {
     REG_ADDRESS = 0,
