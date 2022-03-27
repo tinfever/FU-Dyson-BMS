@@ -89,7 +89,6 @@ uint16_t ISL_GetAnalogOutmV(isl_analogout_t value){
 void ISL_ReadAllCellVoltages(void){
     //Added rolling average to tolerate brief voltage dips during startup using marginal battery cells
     //This might not actually matter much depending on how large the inrush current is on the vacuum and how poor health the battery cells are.
-    _nop();
     #ifdef ENABLE_CELL_VOLTAGE_ROLLING_AVERAGE
     static uint8_t num_iterations = 1;
     
@@ -122,7 +121,6 @@ void ISL_ReadAllCellVoltages(void){
     CellVoltages[5] = ISL_GetAnalogOutmV(AO_VCELL5)*2;
     CellVoltages[6] = ISL_GetAnalogOutmV(AO_VCELL6)*2;
     #endif
-    _nop();
 }
 
 void ISL_calcCellStats(void){

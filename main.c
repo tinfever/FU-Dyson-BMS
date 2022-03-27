@@ -56,8 +56,6 @@ void Set_LED_RGB(uint8_t RGB_en, uint16_t PWM_val){  //Accepts binary input 0b00
     
     EPWM1_LoadDutyValue(PWM_val);
     
-    volatile uint16_t test = EPWM1_ReadDutyValue();
-    
     if (RGB_en & 0b001){
         blueLED = 1;
     }
@@ -314,6 +312,8 @@ void sleep(void){
 }
 
 void idle(void){
+    static bool runonce = 0;
+    
     if (detect == TRIGGER                       //Trigger is pulled
         && minCellOK()          //Min cell is not below low voltage cut out of 3V
         && ISL_GetSpecificBits_cached(ISL.WKUP_STATUS) //Make sure WKUP = 1 meaning charger connected or trigger pressed
@@ -333,7 +333,19 @@ void idle(void){
             && ISL_GetSpecificBits_cached(ISL.WKUP_STATUS) //Make sure WKUP = 1 meaning charger connected or trigger pressed
             && safetyChecks()
         ){
-                state = CHARGING; 
+            if (!runonce){
+                //cell balance LED indicators
+                uint8_t volatile num_yellow_blinks = (cellstats.packdelta_mV+25) / 50;      //One blink per 50mV min-max cell delta. Adding 25 to do normal rounding
+                LED_code_cycle_counter.enable = true;
+                ledBlinkpattern (num_yellow_blinks, 0b110, 250, 250, 750, 500, 0);
+                if (LED_code_cycle_counter.value > 1){
+                    runonce++;
+                    resetLEDBlinkPattern();
+                }
+            }
+            else{
+                    state = CHARGING;
+            }
     }
     else if (detect == NONE                         //Start sleep counter if we are idle with no charger or trigger, but no errors
             && ISL_GetSpecificBits_cached(ISL.WKUP_STATUS) == 0
@@ -388,6 +400,7 @@ void idle(void){
     if (state != IDLE) {
         sleep_timeout_counter.enable = false; //We aren't going to be sleeping soon
         resetLEDBlinkPattern();
+        runonce = 0;
     }
     
     
