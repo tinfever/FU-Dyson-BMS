@@ -1,12 +1,10 @@
 #include "main.h"
-#include "led_blink_pattern.h"
+#include "LED.h"
 #include "mcc_generated_files/epwm1.h"
-
-
+#include "config.h"
+#include "isl94208.h"
 
 void ledBlinkpattern (uint8_t num_blinks, uint8_t led_color_rgb, uint16_t blink_on_time_ms, uint16_t blink_off_time_ms, uint16_t starting_blank_time_ms, uint16_t ending_blank_time_ms, int8_t pwm_fade_slope){       //Example: ledBlinkpattern(8, 0b111); would give 8 white LED blinks
-
-    
     uint16_t timer_ms = nonblocking_wait_counter.value*32;
     
     static uint8_t max_steps = 0; 
@@ -29,7 +27,6 @@ void ledBlinkpattern (uint8_t num_blinks, uint8_t led_color_rgb, uint16_t blink_
     if (pwm_fade_slope > 0){            //Means we need to fade in
         starting_pwm_val = 0;
     }
-    
     
     //Initialize
     if (!nonblocking_wait_counter.enable){
@@ -115,4 +112,42 @@ void resetLEDBlinkPattern (void){
     LED_code_cycle_counter.enable = false;
     LED_code_cycle_counter.value = 0;
     
+}
+
+void Set_LED_RGB(uint8_t RGB_en, uint16_t PWM_val){  //Accepts binary input 0b000. Bit 2 = Red Enable. Bit 1 = Green Enable. Bit 0 = Red Enable. R.G.B.
+    
+    EPWM1_LoadDutyValue(PWM_val);
+    
+    if (RGB_en & 0b001){
+        blueLED = 1;
+    }
+    else{
+        blueLED = 0;
+    }
+    
+    if (RGB_en & 0b010){
+        greenLED = 1;
+    }
+    else{
+        greenLED = 0;
+    }
+    
+    if (RGB_en & 0b100){
+        redLED = 1;
+    }
+    else{
+        redLED = 0;
+    }
+}
+
+bool cellDeltaLEDIndicator (void){
+    uint8_t num_yellow_blinks = (uint8_t) ( (cellstats.packdelta_mV+25) / 50 );      //One blink per 50mV min-max cell delta. Adding 25 to do normal rounding
+    LED_code_cycle_counter.enable = true;
+    ledBlinkpattern (num_yellow_blinks, 0b110, 250, 250, 750, 500, 0);
+    if (LED_code_cycle_counter.value > 1){
+        return true;
+    }
+    else {
+        return false;
+    }
 }

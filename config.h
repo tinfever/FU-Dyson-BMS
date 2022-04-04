@@ -17,6 +17,7 @@
 #ifdef __DEBUG  //Make sure these only work in debug mode
 //#define __DEBUG_DISABLE_PIC_THERMISTOR_READ       //Uncomment for testing
 //#define __DEBUG_DISABLE_PIC_ISL_INT_READ          //Uncomment for testing
+#define __DEBUG_DONT_SLEEP
 #endif
 
 #define redLED PSTR1CONbits.STR1C

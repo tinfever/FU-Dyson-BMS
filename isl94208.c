@@ -149,7 +149,7 @@ int16_t ISL_GetInternalTemp(void){
 }
 
 static uint16_t _ConvertADCtoMV(uint16_t adcval){
-    return (uint16_t) ((uint32_t)adcval * VREF_VOLTAGE_mV / 1024);
+    return (uint16_t) ( ( ( ( (uint32_t)adcval*2 ) + 1 ) * VREF_VOLTAGE_mV + 1024) / 2048);     //https://forum.allaboutcircuits.com/threads/why-adc-1024-is-correct-and-adc-1023-is-just-plain-wrong.80018/
 }
 
 static uint8_t _GenerateMask(uint8_t length){   //Generates a given number of ones in binary. Ex. input 5 = output 0b11111
