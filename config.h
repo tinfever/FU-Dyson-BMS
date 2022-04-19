@@ -30,11 +30,7 @@
 #define TRIS_SCL TRISB4
 #define ANS_SDA ANSB1
 #define ANS_SCL ANSB4
-//#define LED_PWM_STEER PSTR1CONbits.STR1D;     //assign four bits. 1101.
-//Bit 3 = P1D = RA6 = BLUE
-//Bit 2 = P1C = RA7 = RED
-//Bit 1 = P1B = DON'T USE
-//Bit 0 = P1A = RB3 = GREEN
+
 
 #define ISL_I2C_ADDR 0x50
 

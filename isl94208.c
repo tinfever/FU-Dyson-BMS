@@ -11,18 +11,18 @@ void ISL_Init(void){
     __delay_ms(5);      //Wait for things to settle. This isn't in the datasheet but if you send I2C write too soon after POR, the writes won't happen.
     ISL_SetSpecificBits((uint8_t[]){WriteEnable, 5, 3}, 0b111);     //We likely need to enable register writes again
     /* 0 = Auto OC discharge control enabledl
-     00 =  100mV OC threshold / 2mOhm shunt = 50A OC trip. Can't set it any lower, even though PCB fuse is 30A.
+     00 =  100mV OC threshold / 2mOhm shunt = 50A OC trip. Can't set it any lower, even though PCB fuse is 30A. V7 Motorhead vacuum consumes ~3.6A in normal mode or ~17A in max power mode.
      0 = Auto SC discharge control enabled
-     00 = 2mOhm shunt @ 200mV SC threshold = 100A short circuit trip. Can't set any lower.
-     00 = Overcurrent timeout 160ms or 2.5ms if discharge time divider set. Can't set any lower.*/
-    ISL_Write_Register(DischargeSet, 0b00000000);
+     01 = 2mOhm shunt @ 350mV SC threshold = 175A short circuit trip. SC trips were occuring at 100A setting. Current probe measured ~120A peaks at startup
+     00 = Overcurrent timeout 160ms or 2.5ms if discharge time divider set. 2.5ms selected. Can't set any lower.*/
+    ISL_Write_Register(DischargeSet, 0b00000100);
     
     /* 0 = Auto OC charge control enabled
-     10 = 140mV Charge OC threshold @ 100mOhm shunt = 1.4A limit. Ran in to overcurrent charging trips using 600mA Dyson wall adapter with 1A limit set. Set here to 1.4A to match how the original BMS was configured.
+     10 = 140mV Charge OC threshold @ 100mOhm shunt = 1.4A limit. Ran in to overcurrent charging trips using 600mA Dyson wall adapter with 1A limit set. Set here to 1.4A to match how the original BMS behaved.
      0 = short circuit timeout of 190us
      1 = charge OC delay divided by 32,  = 2.5ms
      1 = discharge OC delay divided by 64 = 2.5ms
-     00 = OC charge timeout 80ms or 2.5ms if charge time divider set 
+     00 = OC charge timeout 80ms or 2.5ms if charge time divider set. 2.5ms selected.
      */
     ISL_Write_Register(ChargeSet, 0b01001100);
    

@@ -26,9 +26,13 @@ typedef enum{
     TRIGGER,
     CHARGER
 } detect_t;
-detect_t volatile detect = 0;
-detect_t previous_detect = 0;
 
+detect_t detect = 0;
+//#define DETECT_HISTORY_SIZE 4
+//detect_t detect_history[DETECT_HISTORY_SIZE] = 0;
+//uint8_t oldest_detect_index = 0;
+
+uint8_t detect_history = 0; //Bits 0-1 = position 0; Bits 2-3 = position 1; Bits 4-5 = position 2; Bits 6-7 = position 3
 
 
 typedef enum {
@@ -60,6 +64,8 @@ counter_t nonblocking_wait_counter = {0,0};
 counter_t error_timeout_wait_counter = {0,0};
 big_counter_t charge_duration_counter = {0,0};
 counter_t LED_code_cycle_counter = {0,0};
+detect_t GetDetectHistory(uint8_t position);
+bool ChargerInDetectHistory(void);
 
 uint16_t readADCmV(adc_channel_t channel);
 

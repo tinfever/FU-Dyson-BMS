@@ -208,8 +208,8 @@ void sleep(void){
 }
 
 void idle(void){
-    static bool runonce = 0;
     static bool previous_detect_not_charger = 0;
+    static bool previous_detect_was_charger = 0;
     
     if (detect == TRIGGER                       //Trigger is pulled
         && minCellOK()          //Min cell is not below low voltage cut out of 3V
@@ -229,20 +229,24 @@ void idle(void){
             && maxCellOK()          //Max cell < 4.20V
             && ISL_GetSpecificBits_cached(ISL.WKUP_STATUS) //Make sure WKUP = 1 meaning charger connected or trigger pressed
             && safetyChecks()
+            /* Because detect is is only based on the voltage applied to the
+             * detect pin, it doesn't take in to account WKUP_STATUS on the ISL.
+             * Since the ISL WKUP_STATUS can lag behind, this means detect may
+             * equal CHARGER for several loop cycles before WKUP_STATUS finally
+             * is asserted and we can enter this section. We could modify the
+             * detect function code to check WKUP_STATUS too or we could
+             * implement a longer detect history to watch for certain detect
+             * transitions. I (probably incorrectly) chose the latter.*/
         ){
-        if (previous_detect != CHARGING){
-            previous_detect_not_charger = true;
-        }
-            if (!runonce && previous_detect_not_charger){
-                runonce = cellDeltaLEDIndicator();
-            }
-            else{
+            if (detect_history != 0b10101010){                //if the last four detect cycles weren't CHARGER. CHARGER is 0b10 so 0b10101010 is CHARGER in all four detect_history positions
+                previous_detect_not_charger = true;     //Check detect history so we only run the cell delta LED codes when the charger is actually connected, not because the cells have self discharged enough while on the charger to cause charging to restart
+            } 
+
+            if (!previous_detect_not_charger    //We were connected to the charger the whole time
+                || (previous_detect_not_charger && cellDeltaLEDIndicator())   // Or we weren't connected to the charger previously and/so we've also iterated one cell delta LED indication code
+            ){      
                 state = CHARGING;
             }
-            
-
-            
-            
     }
     else if (detect == NONE                         //Start sleep counter if we are idle with no charger or trigger, but no errors
             && ISL_GetSpecificBits_cached(ISL.WKUP_STATUS) == 0
@@ -267,8 +271,16 @@ void idle(void){
     else if (detect == CHARGER && ISL_GetSpecificBits_cached(ISL.WKUP_STATUS)) {                           //Pack on charger but charge isn't complete and we aren't in a charging or error state = Yellow LED, undefined state
         Set_LED_RGB(0b110, 1023); //LED Yellow
     }
-    else if (detect == NONE){                               //No trigger or charger, pack is awake and idle = Green LED
-        Set_LED_RGB(0b010, 1023); //LED Green
+    else if (detect == NONE){                               
+        if (ChargerInDetectHistory()){
+            previous_detect_was_charger = true;                             //This flag is set if we are transitioning from detect == CHARGER to detect == NONE
+        }
+        if (previous_detect_was_charger && cellDeltaLEDIndicator()){       //If the Charger -> None transition was detected, keep checking/running the cellDeltaLEDIndicator function until it is complete. 
+            previous_detect_was_charger = false;                            //Then remove flag
+        }
+        else if (!previous_detect_was_charger){                             //Once flag is removed, or if flag was never set, show normal green idle LED
+            Set_LED_RGB(0b010, 1023); //LED Green
+        }
     }
     else if (detect == TRIGGER && ISL_GetSpecificBits_cached(ISL.WKUP_STATUS) && !full_discharge_flag){    //trigger is pulled but we didn't enable output, and it isn't because there was an error or the pack is fully discharged = Yellow LED
             //There is a delay inside ISL IC between when detect == TRIGGER and when WKUP == 1. adding && WKUP_STATUS make sure both are in the same state to avoid brief yellow LED flash.
@@ -277,6 +289,7 @@ void idle(void){
     
     //There is no handling for WKUP_STATUS and DETECT to be in different states. If WKUP_STATUS == 0 (don't wakeup) but DETECT == TRIGGER, God help us all.
     
+    //If the charger is connected, we are in a fully charged idle state, the user holds down the trigger, and then disconnects the charger while holding the trigger, the cell balance LED indicator is not shown. Not worth it to implement.
     
     if ( (charge_complete_flag == true && cellstats.maxcell_mV < PACK_CHARGE_NOT_COMPLETE_THRESH_mV) || (detect != CHARGER)){      //If the max cell voltage is below 4100mV and the pack is marked as fully charged, unmark it as charged. Also, if removed from charger, clear charge complete flag.
         charge_complete_flag = false;
@@ -297,8 +310,8 @@ void idle(void){
     if (state != IDLE) {
         sleep_timeout_counter.enable = false; //We aren't going to be sleeping soon
         resetLEDBlinkPattern();
-        runonce = 0;
         previous_detect_not_charger = false;
+        previous_detect_was_charger = false;
     }
     
     
@@ -308,8 +321,6 @@ void idle(void){
 }
 
 void charging(void){
-    static bool runonce = 0;
-    
     if (!ISL_GetSpecificBits_cached(ISL.ENABLE_CHARGE_FET)     //if we aren't already charging
         && detect == CHARGER
         && maxCellOK()
@@ -351,26 +362,21 @@ void charging(void){
     else{                                   //charger removed before complete charge
         ISL_SetSpecificBits(ISL.ENABLE_CHARGE_FET, 0); //Disable Charging
         charge_duration_counter.enable = false;         //Stop charge timer
-        if (!runonce){
-                runonce = cellDeltaLEDIndicator();
-            }
-        else{
-            resetLEDBlinkPattern();
+        if (cellDeltaLEDIndicator()){   //Repeat the cellDeltaLEDIndicator() function until one iteration, when it will return true.
             state = IDLE;
         }
         
         
     }
-    
-    //State change clean up
-    if (state != CHARGING){
-     runonce = 0;   //Reset runonce for next usage
-    }
+
     
 }
 
 void chargingWait(void){
-    Set_LED_RGB(0b111, 1023); //White LED
+    if (detect == CHARGER){                     //Don't set the LED like this if the charger isn't connected because it will interfere with the cellDeltaLEDIndicator
+        Set_LED_RGB(0b111, 1023); //White LED
+    }
+    
     if (!charge_wait_counter.enable){   //if counter isn't enabled, clear and enable it.
         charge_wait_counter.value = 0;
         charge_wait_counter.enable = true;  //Clear and start charge wait counter
@@ -380,9 +386,11 @@ void chargingWait(void){
         state = CHARGING;
     }
     
-    if (detect == NONE){                    //Charger removed
+    if (detect != CHARGER){                    //Charger removed
         charge_wait_counter.enable = false;
-        state = IDLE;
+        if (cellDeltaLEDIndicator()){   //Repeat the cellDeltaLEDIndicator() function until one iteration, when it will return true.
+            state = IDLE;
+        }
     }
     
     if (!safetyChecks()){  //Somehow there was an error
@@ -398,6 +406,7 @@ void cellBalance(void){
 
 void outputEN(void){
     static uint8_t startup_led_step = 0;
+    static bool runonce = 0;
 
         if (!ISL_GetSpecificBits_cached(ISL.ENABLE_DISCHARGE_FET)  //If discharge isn't already enabled
             && detect == TRIGGER                       //Trigger is pulled
@@ -463,8 +472,12 @@ void outputEN(void){
         }
         else if (detect == CHARGER){    //Charger attached while trigger was pulled
             ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);   //Disable discharging
-            LED_code_cycle_counter.value = 0;
-            LED_code_cycle_counter.enable = true;
+            if (!runonce){
+                LED_code_cycle_counter.value = 0;
+                LED_code_cycle_counter.enable = true;
+                runonce = true;
+            }
+            
             uint8_t num_blinks = FIRMWARE_VERSION;
             ledBlinkpattern (num_blinks, 0b111, 500, 500, 1000, 1000, 0);
             if (LED_code_cycle_counter.value > 1){       //One LED cycle completed
@@ -479,6 +492,7 @@ void outputEN(void){
     //State change cleanup
     if (state != OUTPUT_EN){
         startup_led_step = 0;
+        runonce = false;
         resetLEDBlinkPattern();
     }
     
@@ -516,7 +530,7 @@ void error(void){
                 LED_code_cycle_counter.enable = true;
             }
 
-            /* This is error wait timeout is necessary because the while the ISL94208 datasheet claims:
+            /* Error wait timeout is necessary because the while the ISL94208 datasheet claims:
              * "If the over-temperature condition has cleared, this bit is reset when the register is read."
              * regarding the external over temperature (XOT) bit, this does not appear to be true.
              * If we are continuously reading the status register, the XOT bit will only be read as asserted roughly once every 560ms.
@@ -559,7 +573,7 @@ void error(void){
     else if (past_error_reason.DISCHARGE_OC_SHUNT_PICREAD) ledBlinkpattern (11, 0b100, 500, 500, 1000, 1000, 0);
     else if (past_error_reason.CHARGE_ISL_INT_OVERTEMP_PICREAD) ledBlinkpattern (12, 0b100, 500, 500, 1000, 1000, 0);
     else if (past_error_reason.CHARGE_THERMISTOR_OVERTEMP_PICREAD) ledBlinkpattern (13, 0b100, 500, 500, 1000, 1000, 0);
-    else if (full_discharge_trigger_error) ledBlinkpattern (3, 0b001, 500, 500, 1000, 1000, 0);       //trigger is pulled but battery is low
+    else if (full_discharge_trigger_error) ledBlinkpattern (3, 0b001, 300, 300, 750, 750, 0);       //trigger is pulled but battery is low
     else ledBlinkpattern (20, 0b100, 500, 500, 1000, 1000, 0);                                                                  //Unidentified Error
     
     
@@ -567,18 +581,18 @@ void error(void){
     
     
     if (sleep_timeout_counter.enable == false   //If there is an error, start sleep counter (if it isn't already started), so we sleep if in error state for too long
-            && detect == NONE){                 //Also, don't start sleep sequence if we are connected to charger or someone is holding trigger
+            && detect != CHARGER){                 //Also, don't start sleep sequence if we are connected to charger
         sleep_timeout_counter.value = 0;
         sleep_timeout_counter.enable = true;
     }
-    else if (detect != NONE){                   //If at any point the charger is connected or trigger pressed, abort sleep sequence.
+    else if (detect == CHARGER){                   //If at any point the charger is connected, abort sleep sequence. I'm not quite sure why we'd want to though.
         sleep_timeout_counter.enable = false;
     }
     else if (sleep_timeout_counter.value >  ERROR_SLEEP_TIMEOUT //1876*32ms = 60.032s //If we are in ERROR state for 60 seconds, just go to sleep.
             && sleep_timeout_counter.enable == true
             && nonblocking_wait_counter.enable == false     //Don't sleep in the middle of an LED blink code cycle
             && nonblocking_wait_counter.value == 0
-            && detect == NONE
+            && detect != CHARGER
             ){    
         sleep_timeout_counter.enable = false;
         state = SLEEP;
@@ -589,7 +603,24 @@ void error(void){
 #ifdef __DEBUG
     volatile uint16_t loop_counter = 0;
 #endif
+        
+void RecordDetectHistory(void){
+    detect_history = (uint8_t) ( (uint8_t) (detect_history << 2) | (detect & 0b00000011) );
+}
     
+detect_t GetDetectHistory(uint8_t position){
+    return (detect_t) ((detect_history >> (2*position)) & 0b00000011);
+}
+
+bool ChargerInDetectHistory(void){
+    for (uint8_t i = 0; i < 4; i++){
+        if(GetDetectHistory(i) == CHARGER){
+            return true;
+        }
+    }
+    return false;
+}
+
 void main(void)
 {
     
@@ -611,8 +642,9 @@ void main(void)
         
         ISL_ReadAllCellVoltages();
         ISL_calcCellStats();
-        previous_detect = detect;
+        RecordDetectHistory();
         detect = checkDetect();
+        
 //        if (state == IDLE && detect == TRIGGER){
 //            __debug_break();
 //        }
@@ -635,7 +667,11 @@ void main(void)
         discharge_current_mA = dischargeIsense_mA();
         
             //TODO: Add I2C error check here
-        
+//        if (I2C_ERROR_FLAGS != 0){
+//            while(true){
+//                Set_LED_RGB(0b100, 1023);
+//            }
+//        }
         
         switch(state){
             case INIT:

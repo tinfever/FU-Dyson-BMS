@@ -1,0 +1,8 @@
+.generated_files/
+build/
+dist/
+nbproject/Makefile-*
+nbproject/Package-*
+nbproject/private/
+.ca/
+.vscode/

@@ -141,10 +141,11 @@ void Set_LED_RGB(uint8_t RGB_en, uint16_t PWM_val){  //Accepts binary input 0b00
 }
 
 bool cellDeltaLEDIndicator (void){
-    uint8_t num_yellow_blinks = (uint8_t) ( (cellstats.packdelta_mV+25) / 50 );      //One blink per 50mV min-max cell delta. Adding 25 to do normal rounding
+    uint8_t num_yellow_blinks = (uint8_t) ( (cellstats.packdelta_mV+25) / 50 );      //One blink per 50mV min-max cell delta. Adding 25 to do traditional rounding
     LED_code_cycle_counter.enable = true;
     ledBlinkpattern (num_yellow_blinks, 0b110, 250, 250, 750, 500, 0);
     if (LED_code_cycle_counter.value > 1){
+        resetLEDBlinkPattern();
         return true;
     }
     else {

@@ -1,4 +1,4 @@
-<config configName="default" projectName="I2C_From_Scratch" configVersion="1.1" device="PIC16LF1847" deviceLibraryClass="com.microchip.mcc.mcu8.Mcu8PeripheralLibrary" coreVersion="5.4.1">
+<config configName="default" projectName="I2C_From_Scratch" configVersion="1.1" device="PIC16LF1847" deviceLibraryClass="com.microchip.mcc.mcu8.Mcu8PeripheralLibrary" coreVersion="5.4.2">
    <usedPackages class="java.util.ArrayList"/>
    <usedClasses class="java.util.TreeMap">
       <entry>
@@ -3573,12 +3573,12 @@
          <hash>8040d81f175f7666d87d4f4a8d8c85a10434273d515a21f7082df315e16f4f00</hash>
       </entry>
       <entry>
-         <file>mcc_generated_files\tmr2.c</file>
-         <hash>a58c6b5f6c66092af65af3a2a852ed5608efd9537049a70b766363710d9cfb2b</hash>
-      </entry>
-      <entry>
          <file>mcc_generated_files\pin_manager.h</file>
          <hash>df0dd88dc2a7d7b9a29734e47fe0f65f44e3c7414cbed59df46fddd70c228954</hash>
+      </entry>
+      <entry>
+         <file>mcc_generated_files\tmr2.c</file>
+         <hash>a58c6b5f6c66092af65af3a2a852ed5608efd9537049a70b766363710d9cfb2b</hash>
       </entry>
       <entry>
          <file>mcc_generated_files\tmr4.c</file>
