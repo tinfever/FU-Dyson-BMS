@@ -12,12 +12,13 @@
 #include "mcc_generated_files/epwm1.h"
 
 #define FIRMWARE_VERSION 1;
+#define ASCII_FIRMWARE_VERSION 0x31;      //ASCII '1' = 0x31. This must be manually determined so the EEPROM section is human readable.
 
 //Uncomment these lines while in debug mode to disable certain temperature checks for testing.
 #ifdef __DEBUG  //Make sure these only work in debug mode
 //#define __DEBUG_DISABLE_PIC_THERMISTOR_READ       //Uncomment for testing
 //#define __DEBUG_DISABLE_PIC_ISL_INT_READ          //Uncomment for testing
-#define __DEBUG_DONT_SLEEP
+//#define __DEBUG_DONT_SLEEP
 #endif
 
 #define redLED PSTR1CONbits.STR1C
@@ -56,6 +57,7 @@ const uint16_t VREF_VOLTAGE_mV = 2500;
 
 const uint8_t MAX_CHARGE_TEMP_C = 50;           //Celsius. MAX_DISCHARGE_TEMP_C must be greater than MAX_CHARGE_TEMP_C for it to work correctly.
 const uint8_t MAX_DISCHARGE_TEMP_C = 60;        //Celsius
+const uint8_t MIN_TEMP_C = 7; //Celsius. 7 degrees C is the lowest value in SV11 thermistor LUT. Must be > HYSTERESIS_TEMP_C to avoid potential overflow issues in getThermistorTemp
 const uint16_t MAX_DISCHARGE_CURRENT_mA = 30000;
 const uint16_t MIN_DISCHARGE_CELL_VOLTAGE_mV = 3000;
 const uint16_t MAX_CHARGE_CELL_VOLTAGE_mV = 4200;
@@ -96,6 +98,15 @@ const uint8_t NUM_OF_LED_CODES_AFTER_FAULT_CLEAR = 3;
 /* Number of samples to include in the cell voltage rolling averaging*/
 #define CELLVOLTAGE_AVERAGE_WINDOW_SIZE 4
 
+/* Comment this line out to have the pack always stay awake while the charger is connected.
+ * This will increase idle power draw and cause charging to be enabled occasionally to keep the battery topped off.
+ * I expect this repeated slow discharge (due to staying awake) and repeated top off cycles to decrease battery life.
+ * I'm not sure how bad this will be though.
+ * In theory, this option should let you keep a pack with a high level of self-discharge fully charged.
+ * It won't help you if your cells are going out of balance though. */
+#define SLEEP_AFTER_CHARGE_COMPLETE
+
+#define EEPROM_START_OF_EVENT_LOGS_ADDR 0x20
 
 
 

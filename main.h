@@ -48,6 +48,12 @@ bool charge_complete_flag = false;
 bool full_discharge_flag = false;
 uint16_t discharge_current_mA = 0;
 
+
+const uint8_t EEPROM_NEXT_BYTE_AVAIL_STORAGE_ADDR = 0x18;
+const uint8_t EEPROM_RUNTIME_TOTAL_STARTING_ADDR = 0x1C;    //32-bit runtime counter to be held in 0x1C, 0x1D, 0x1E, 0x1F
+    
+
+
 typedef struct {
     uint16_t value;
     bool enable;
@@ -64,10 +70,13 @@ counter_t nonblocking_wait_counter = {0,0};
 counter_t error_timeout_wait_counter = {0,0};
 big_counter_t charge_duration_counter = {0,0};
 counter_t LED_code_cycle_counter = {0,0};
+big_counter_t total_runtime_counter = {0,0};
+
 detect_t GetDetectHistory(uint8_t position);
-bool ChargerInDetectHistory(void);
+bool CheckStateInDetectHistory(detect_t detect_val);
 
 uint16_t readADCmV(adc_channel_t channel);
+void WriteTotalRuntimeCounterToEEPROM(uint8_t starting_addr);
 
 
 

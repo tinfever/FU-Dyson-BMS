@@ -6,10 +6,9 @@
 
 
 
-uint8_t getThermistorTemp (modelnum_t modelnum){
+uint8_t getThermistorTemp (modelnum_t modelnum){    //Binary search algorithm with minor tweaks and rounding
     
     uint16_t pic_thermistor = readADCmV(ADC_THERMISTOR);
-    
     
     uint8_t iteration = 1;
     int16_t increment = LUT_SIZE[modelnum]/(1 << iteration);    //Making this larger and signed because I'm concerned about going out of bounds and being unable to check

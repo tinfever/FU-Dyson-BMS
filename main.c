@@ -53,7 +53,12 @@
 #include "LED.h"
 #include "FaultHandling.h"
 
-
+//EEPROM Init during programming
+__EEPROM_DATA(0x54, 0x69, 0x6E, 0x66, 0x65, 0x76, 0x65, 0x72);              //"Tinfever"
+__EEPROM_DATA(0x20, 0x46, 0x55, 0x5F, 0x44, 0x79, 0x73, 0x6F);              //" FU_Dyso"
+__EEPROM_DATA(0x6E, 0x5F, 0x42, 0x4D, 0x53, 0x20, 0x56, ASCII_FIRMWARE_VERSION);  //"n_BMS V{insert firmware version here}"
+__EEPROM_DATA(EEPROM_START_OF_EVENT_LOGS_ADDR, 0, 0, 0, 0, 0, 0, 0);                                     //Address of the next available space for recording error events
+//
 
 void ClearI2CBus(){
     uint8_t initialState[] = {TRIS_SDA, TRIS_SCL, ANS_SDA, ANS_SCL, SDA, SCL, SSP1CON1bits.SSPEN}; //Backup initial pin setup state
@@ -187,7 +192,15 @@ void init(void){
     
     ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);       //Make sure the pack is turned off in case we had some weird reset
     ISL_SetSpecificBits(ISL.ENABLE_CHARGE_FET, 0);
-    modelnum = checkModelNum();
+    modelnum = checkModelNum();    
+    
+    //Load 32-bit total runtime counter from EEPROM
+    total_runtime_counter.value = (uint32_t) DATAEE_ReadByte(EEPROM_RUNTIME_TOTAL_STARTING_ADDR) << 24;
+    total_runtime_counter.value |= (uint32_t) DATAEE_ReadByte(EEPROM_RUNTIME_TOTAL_STARTING_ADDR+1) << 16;
+    total_runtime_counter.value |= (uint32_t) DATAEE_ReadByte(EEPROM_RUNTIME_TOTAL_STARTING_ADDR+2) << 8;
+    total_runtime_counter.value |= (uint32_t) DATAEE_ReadByte(EEPROM_RUNTIME_TOTAL_STARTING_ADDR+3);
+    
+    
     //INIT END
     
     state = IDLE;
@@ -238,7 +251,7 @@ void idle(void){
              * implement a longer detect history to watch for certain detect
              * transitions. I (probably incorrectly) chose the latter.*/
         ){
-            if (detect_history != 0b10101010){                //if the last four detect cycles weren't CHARGER. CHARGER is 0b10 so 0b10101010 is CHARGER in all four detect_history positions
+            if (CheckStateInDetectHistory(CHARGER)){                //if the last four detect cycles weren't CHARGER. CHARGER is 0b10 so 0b10101010 is CHARGER in all four detect_history positions
                 previous_detect_not_charger = true;     //Check detect history so we only run the cell delta LED codes when the charger is actually connected, not because the cells have self discharged enough while on the charger to cause charging to restart
             } 
 
@@ -248,8 +261,14 @@ void idle(void){
                 state = CHARGING;
             }
     }
-    else if (detect == NONE                         //Start sleep counter if we are idle with no charger or trigger, but no errors
+    else if ((detect == NONE                         //Start sleep counter if we are idle with no charger or trigger, but no errors
+            #ifdef SLEEP_AFTER_CHARGE_COMPLETE
+            || (detect == CHARGER && charge_complete_flag)      //Also sleep after charge is complete while we are on the charger, if configured.
+            #endif
+            )
+            #ifndef SLEEP_AFTER_CHARGE_COMPLETE
             && ISL_GetSpecificBits_cached(ISL.WKUP_STATUS) == 0
+            #endif
             && sleep_timeout_counter.enable == false
             && safetyChecks()
             ){
@@ -272,7 +291,7 @@ void idle(void){
         Set_LED_RGB(0b110, 1023); //LED Yellow
     }
     else if (detect == NONE){                               
-        if (ChargerInDetectHistory()){
+        if (CheckStateInDetectHistory(CHARGER)){                                //Show cell delta code when charger removed after complete charge
             previous_detect_was_charger = true;                             //This flag is set if we are transitioning from detect == CHARGER to detect == NONE
         }
         if (previous_detect_was_charger && cellDeltaLEDIndicator()){       //If the Charger -> None transition was detected, keep checking/running the cellDeltaLEDIndicator function until it is complete. 
@@ -332,6 +351,7 @@ void charging(void){
             charge_duration_counter.enable = true;          //Start charge timer
             ISL_SetSpecificBits(ISL.ENABLE_CHARGE_FET, 1);  //Enable Charging
             full_discharge_flag = false;                    //Clear full discharge flag once we start charging
+            resetLEDBlinkPattern();
             Set_LED_RGB(0b001, 1023); //Blue LED
     }
     else if (ISL_GetSpecificBits_cached(ISL.ENABLE_CHARGE_FET)     //same as above but we are already charging and all conditions are good
@@ -368,7 +388,10 @@ void charging(void){
         
         
     }
-
+    //Clean up before state change
+    if (state != CHARGING){
+        resetLEDBlinkPattern();
+    }
     
 }
 
@@ -414,8 +437,8 @@ void outputEN(void){
             && minCellOK()          //Min cell is not below low voltage cut out of 3V
             && safetyChecks()
                 ){
-                Set_LED_RGB(0b111, 1023); //White LED
                 ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 1);
+                total_runtime_counter.enable = true;
                 LED_code_cycle_counter.value = 0;
         }
         else if (ISL_GetSpecificBits_cached(ISL.ENABLE_DISCHARGE_FET)  //Same as above but we are already discharging and all conditions are good
@@ -472,6 +495,7 @@ void outputEN(void){
         }
         else if (detect == CHARGER){    //Charger attached while trigger was pulled
             ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);   //Disable discharging
+            
             if (!runonce){
                 LED_code_cycle_counter.value = 0;
                 LED_code_cycle_counter.enable = true;
@@ -491,6 +515,12 @@ void outputEN(void){
     
     //State change cleanup
     if (state != OUTPUT_EN){
+        total_runtime_counter.enable = false;
+        
+        //Write latest runtime counter value to EEPROM
+        WriteTotalRuntimeCounterToEEPROM(EEPROM_RUNTIME_TOTAL_STARTING_ADDR);
+        
+        
         startup_led_step = 0;
         runonce = false;
         resetLEDBlinkPattern();
@@ -499,9 +529,10 @@ void outputEN(void){
 }
 
 void error(void){
-    //TODO: Add a write to EEPROM with error info for logging
     ISL_Write_Register(FETControl, 0b00000000);     //Make sure all FETs are disabled
     
+    static bool EEPROM_Event_Logged = false;
+
     current_error_reason = (error_reason_t){0};
     setErrorReasonFlags(&current_error_reason);
     
@@ -511,10 +542,50 @@ void error(void){
         full_discharge_trigger_error = true;
     }
     
+    if (!EEPROM_Event_Logged && !full_discharge_trigger_error){    //full_discharge_trigger_error isn't an actual error that needs recording
+        const uint8_t byte_size_of_event_log = 6;
+        uint8_t starting_write_addr = DATAEE_ReadByte(EEPROM_NEXT_BYTE_AVAIL_STORAGE_ADDR);
+        
+        //Assemble first byte
+        uint8_t data_byte_1 = 0;
+        data_byte_1 |= past_error_reason.ISL_INT_OVERTEMP_FLAG << 7;                //Due to bit-field used in declaration, these can only be one bit.
+        data_byte_1 |= past_error_reason.ISL_EXT_OVERTEMP_FLAG << 6;
+        data_byte_1 |= past_error_reason.ISL_INT_OVERTEMP_PICREAD << 5;
+        data_byte_1 |= past_error_reason.THERMISTOR_OVERTEMP_PICREAD << 4;
+        data_byte_1 |= past_error_reason.UNDERTEMP_FLAG << 3;
+        data_byte_1 |= past_error_reason.CHARGE_OC_FLAG << 2;
+        data_byte_1 |= past_error_reason.DISCHARGE_OC_FLAG << 1;
+        data_byte_1 |= past_error_reason.DISCHARGE_SC_FLAG;
+        
+        //Assemble second byte
+        uint8_t data_byte_2 = 0;
+        data_byte_2 |= past_error_reason.DISCHARGE_OC_SHUNT_PICREAD << 7;
+        data_byte_2 |= past_error_reason.CHARGE_ISL_INT_OVERTEMP_PICREAD << 6;
+        data_byte_2 |= past_error_reason.CHARGE_THERMISTOR_OVERTEMP_PICREAD << 5;
+        data_byte_2 |= past_error_reason.TEMP_HYSTERESIS << 4;                          //These last three data points are probably useless
+        data_byte_2 |= past_error_reason.ERROR_TIMEOUT_WAIT << 3;
+        data_byte_2 |= past_error_reason.LED_BLINK_CODE_MIN_PRESENTATIONS  << 2;
+        data_byte_2 |= (past_error_reason.DETECT_MODE & 0b00000011);
+        
+        //Write data to EEPROM
+        DATAEE_WriteByte(starting_write_addr, data_byte_1);
+        DATAEE_WriteByte(starting_write_addr+1, data_byte_2);
+        WriteTotalRuntimeCounterToEEPROM(starting_write_addr+2);
+        
+        uint8_t future_starting_write_addr = EEPROM_START_OF_EVENT_LOGS_ADDR;           //Default to the starting address of 0x20
+        if (     !( ((uint16_t) starting_write_addr + byte_size_of_event_log + byte_size_of_event_log - 1) > 255 )     ){        //Make sure that there is enough room left after we write our 6 bytes. Subtract one because we are checking if the ending of the next event would be out of bounds.
+            future_starting_write_addr = starting_write_addr + byte_size_of_event_log;
+        }
+        
+        DATAEE_WriteByte(EEPROM_NEXT_BYTE_AVAIL_STORAGE_ADDR, future_starting_write_addr);   //Record next available free space for future event records
+        EEPROM_Event_Logged = true;
+    }
+    
     if (!current_error_reason.ISL_INT_OVERTEMP_FLAG
         && !current_error_reason.ISL_EXT_OVERTEMP_FLAG 
         && !current_error_reason.ISL_INT_OVERTEMP_PICREAD 
         && !current_error_reason.THERMISTOR_OVERTEMP_PICREAD 
+        && !current_error_reason.UNDERTEMP_FLAG
         && !current_error_reason.CHARGE_OC_FLAG 
         && !current_error_reason.DISCHARGE_OC_FLAG 
         && !current_error_reason.DISCHARGE_SC_FLAG 
@@ -553,8 +624,8 @@ void error(void){
                 current_error_reason = (error_reason_t){0};
                 resetLEDBlinkPattern();
                 full_discharge_trigger_error = false; //Reset for next usage
+                EEPROM_Event_Logged = false;
                 state = IDLE;
-                //__delay_ms(500); //This is a terrible hack to have a blank time on the LED before going back to idle
                 return;
             }
         }
@@ -573,6 +644,7 @@ void error(void){
     else if (past_error_reason.DISCHARGE_OC_SHUNT_PICREAD) ledBlinkpattern (11, 0b100, 500, 500, 1000, 1000, 0);
     else if (past_error_reason.CHARGE_ISL_INT_OVERTEMP_PICREAD) ledBlinkpattern (12, 0b100, 500, 500, 1000, 1000, 0);
     else if (past_error_reason.CHARGE_THERMISTOR_OVERTEMP_PICREAD) ledBlinkpattern (13, 0b100, 500, 500, 1000, 1000, 0);
+    else if (past_error_reason.UNDERTEMP_FLAG) ledBlinkpattern (14, 0b100, 500, 500, 1000, 1000, 0);
     else if (full_discharge_trigger_error) ledBlinkpattern (3, 0b001, 300, 300, 750, 750, 0);       //trigger is pulled but battery is low
     else ledBlinkpattern (20, 0b100, 500, 500, 1000, 1000, 0);                                                                  //Unidentified Error
     
@@ -612,13 +684,20 @@ detect_t GetDetectHistory(uint8_t position){
     return (detect_t) ((detect_history >> (2*position)) & 0b00000011);
 }
 
-bool ChargerInDetectHistory(void){
+bool CheckStateInDetectHistory(detect_t detect_val){
     for (uint8_t i = 0; i < 4; i++){
-        if(GetDetectHistory(i) == CHARGER){
+        if(GetDetectHistory(i) == detect_val){
             return true;
         }
     }
     return false;
+}
+
+void WriteTotalRuntimeCounterToEEPROM(uint8_t starting_addr){       //Make sure there are four bytes available with the provided starting address
+    DATAEE_WriteByte(starting_addr, (uint8_t) ((total_runtime_counter.value & 0xFF000000) >> 24)     );
+    DATAEE_WriteByte(starting_addr+1, (uint8_t) ((total_runtime_counter.value & 0xFF0000) >> 16) );
+    DATAEE_WriteByte(starting_addr+2, (uint8_t) ((total_runtime_counter.value & 0xFF00) >> 8)    );
+    DATAEE_WriteByte(starting_addr+3, (uint8_t) (total_runtime_counter.value & 0xFF)   );
 }
 
 void main(void)
@@ -729,17 +808,14 @@ void main(void)
                 error_timeout_wait_counter.value++;
             }
             
+            if (total_runtime_counter.enable){
+                total_runtime_counter.value++;
+            }
+            
+            
         
         
         }
-
-
-        
-//        #ifdef __DEBUG
-//        for (uint8_t i = 0; i < __ISL_NUMBER_OF_REG; i++){
-//            ISL_Read_Register(i);
-//        }
-//        #endif
         
         
     }

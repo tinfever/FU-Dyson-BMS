@@ -16,6 +16,7 @@ typedef struct {
     bool ISL_EXT_OVERTEMP_FLAG : 1;
     bool ISL_INT_OVERTEMP_PICREAD : 1;
     bool THERMISTOR_OVERTEMP_PICREAD : 1;
+    bool UNDERTEMP_FLAG : 1;
     bool CHARGE_OC_FLAG : 1;
     bool DISCHARGE_OC_FLAG : 1;
     bool DISCHARGE_SC_FLAG : 1;

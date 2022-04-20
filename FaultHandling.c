@@ -7,6 +7,8 @@ bool safetyChecks (void){
     bool result = true;
     result &= (isl_int_temp < MAX_DISCHARGE_TEMP_C);        //Internal ISL temp is OK
     result &= (thermistor_temp < MAX_DISCHARGE_TEMP_C);    //Thermistor temp is OK
+    result &= (isl_int_temp > MIN_TEMP_C);                  //Make sure it isn't too cold for charger or discharging
+    result &= (thermistor_temp > MIN_TEMP_C);  
     result &= (ISL_RegData[Status] == 0);               //No ISL error flags
     result &= (discharge_current_mA < MAX_DISCHARGE_CURRENT_mA);     //We aren't discharging more than 30A
     
@@ -48,6 +50,8 @@ void setErrorReasonFlags(volatile error_reason_t *datastore){
     datastore->ISL_EXT_OVERTEMP_FLAG |= ISL_GetSpecificBits_cached(ISL.EXT_OVER_TEMP_STATUS);
     datastore->ISL_INT_OVERTEMP_PICREAD |= !(isl_int_temp < MAX_DISCHARGE_TEMP_C);
     datastore->THERMISTOR_OVERTEMP_PICREAD |= !(thermistor_temp < MAX_DISCHARGE_TEMP_C);
+    datastore->UNDERTEMP_FLAG |= !(isl_int_temp > MIN_TEMP_C);
+    datastore->UNDERTEMP_FLAG |= !(thermistor_temp > MIN_TEMP_C);
     datastore->CHARGE_OC_FLAG |= ISL_GetSpecificBits_cached(ISL.OC_CHARGE_STATUS);
     datastore->DISCHARGE_OC_FLAG |= ISL_GetSpecificBits_cached(ISL.OC_DISCHARGE_STATUS);
     datastore->DISCHARGE_SC_FLAG |= ISL_GetSpecificBits_cached(ISL.SHORT_CIRCUIT_STATUS);
@@ -66,7 +70,8 @@ void setErrorReasonFlags(volatile error_reason_t *datastore){
             || past_error_reason.ISL_INT_OVERTEMP_PICREAD
             || past_error_reason.THERMISTOR_OVERTEMP_PICREAD
             || past_error_reason.CHARGE_ISL_INT_OVERTEMP_PICREAD
-            || past_error_reason.CHARGE_THERMISTOR_OVERTEMP_PICREAD)
+            || past_error_reason.CHARGE_THERMISTOR_OVERTEMP_PICREAD
+            || past_error_reason.UNDERTEMP_FLAG)
             ) { //If we are in the error state, we need to check if we are in hysteresis violation 
         datastore->TEMP_HYSTERESIS |= (isl_int_temp < MAX_DISCHARGE_TEMP_C && !(isl_int_temp + HYSTERESIS_TEMP_C < MAX_DISCHARGE_TEMP_C));  //Hysteresis only matters if we aren't over the main temp. limit.
         
@@ -86,6 +91,9 @@ void setErrorReasonFlags(volatile error_reason_t *datastore){
         
         datastore->CHARGE_ISL_INT_OVERTEMP_PICREAD |= (past_error_reason.DETECT_MODE == CHARGER  //The past error occurred while on the charger
                                                         && !(isl_int_temp < MAX_CHARGE_TEMP_C)); //and we are still violating the main charge temp limit
+        
+        datastore->TEMP_HYSTERESIS |= (thermistor_temp > MIN_TEMP_C) && !(thermistor_temp - HYSTERESIS_TEMP_C > MIN_TEMP_C); 
+        datastore->TEMP_HYSTERESIS |= (isl_int_temp > MIN_TEMP_C) && !(isl_int_temp - HYSTERESIS_TEMP_C > MIN_TEMP_C); 
 
     }
     
