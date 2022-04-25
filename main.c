@@ -54,10 +54,10 @@
 #include "FaultHandling.h"
 
 //EEPROM Init during programming
-__EEPROM_DATA(0x54, 0x69, 0x6E, 0x66, 0x65, 0x76, 0x65, 0x72);              //"Tinfever"
-__EEPROM_DATA(0x20, 0x46, 0x55, 0x5F, 0x44, 0x79, 0x73, 0x6F);              //" FU_Dyso"
-__EEPROM_DATA(0x6E, 0x5F, 0x42, 0x4D, 0x53, 0x20, 0x56, ASCII_FIRMWARE_VERSION);  //"n_BMS V{insert firmware version here}"
-__EEPROM_DATA(EEPROM_START_OF_EVENT_LOGS_ADDR, 0, 0, 0, 0, 0, 0, 0);                                     //Address of the next available space for recording error events
+__EEPROM_DATA(0x54, 0x69, 0x6E, 0x66, 0x65, 0x76, 0x65, 0x72);              //"Tinfever"    EEPROM addresses 0x00 - 0x07
+__EEPROM_DATA(0x20, 0x46, 0x55, 0x2D, 0x44, 0x79, 0x73, 0x6F);              //" FU-Dyso"    EEPROM addresses 0x08 - 0x0F
+__EEPROM_DATA(0x6E, 0x2D, 0x42, 0x4D, 0x53, 0x20, 0x56, ASCII_FIRMWARE_VERSION);  //"n-BMS V{insert firmware version here}"     EEPROM addresses 0x10 - 0x17
+__EEPROM_DATA(0, EEPROM_START_OF_EVENT_LOGS_ADDR, 0, 0, 0, 0, 0, 0);                                     //Address of the next available space for recording error events       EEPROM addresses 0x17 - 0x1F
 //
 
 void ClearI2CBus(){
@@ -77,7 +77,7 @@ void ClearI2CBus(){
         __delay_us(5); //Wait out clock low period
         TRIS_SCL = 1; //Clock high
         __delay_us(2.5);  //Wait until we are in the mid point of clock high period
-        if (SDA == 1){  //Read data and check if SDA is high (idle)
+        if (SDA == 1 && SCL == 1){  //Read data and check if SDA is high (idle). Also make sure SCL isn't getting glitched low
             validOnes++;
         }
         else{
@@ -165,18 +165,6 @@ void init(void){
     SYSTEM_Initialize();
     TMR4_StartTimer();   //Keep timer running
     DAC_SetOutput(0);   //Make sure DAC output is 0V = VSS
-    
-    /* Initialize LEDS */
-//    redLED = 1;  //Set high to default RED led to off
-//    greenLED = 1;  //Set high to default GREEN led to off
-//    blueLED = 1;  //Set high to default BLUE led to off
-//    TRISB3 = 0; // Set greenLED as output
-//    TRISA6 = 0; //Set blueLED as output
-//    TRISA7 = 0; //Set redLED as output
-//    ANSB3 = 0; //Set Green LED as digital. Red and Blue are always digital.
-
-    /* Immediately start yellow LED so we know board is alive */
-    //Set_LED_RGB(0b110);
 
     //* Set up I2C pins */
     TRIS_SDA = 1;     //SDA - Make sure both pins are inputs
@@ -186,7 +174,7 @@ void init(void){
     I2C1_Init();
     ClearI2CBus();  //Clear I2C bus once on startup just in case
     while (SDA == 0 || SCL == 0){   //If bus is still not idle (meaning pins aren't high), which shouldn't be possible, then keep trying to clear bus. Do not pass go. Do not collect $200.
-        __debug_break();
+    //    __debug_break();
         ClearI2CBus();
     }
     
@@ -217,6 +205,10 @@ void sleep(void){
     ISL_SetSpecificBits(ISL.SLEEP, 0);
     __delay_us(50);
     ISL_SetSpecificBits(ISL.SLEEP, 1);
+     __delay_ms(250);
+    //ISL_SetSpecificBits(ISL.FORCE_POR, 1);  //If the ISL didn't actually sleep when we just told it to, something is seriously wrong. The best we can do is to try to reset the ISL.
+     ClearI2CBus();
+     ISL_Init();    //This includes a POR reset of the ISL
 
 }
 
@@ -333,10 +325,6 @@ void idle(void){
         previous_detect_was_charger = false;
     }
     
-    
-    //TODO: add entry in to error state if trigger pulled while voltage too low so we go to sleep
-            //add entry to error state if charger connected while voltage too high?
-    
 }
 
 void charging(void){
@@ -430,6 +418,7 @@ void cellBalance(void){
 void outputEN(void){
     static uint8_t startup_led_step = 0;
     static bool runonce = 0;
+    static bool need_to_clear_LEDs_for_cell_voltage_indicator = 1;
 
         if (!ISL_GetSpecificBits_cached(ISL.ENABLE_DISCHARGE_FET)  //If discharge isn't already enabled
             && detect == TRIGGER                       //Trigger is pulled
@@ -438,8 +427,12 @@ void outputEN(void){
             && safetyChecks()
                 ){
                 ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 1);
+                startup_led_step = 0;
+                resetLEDBlinkPattern();
+                need_to_clear_LEDs_for_cell_voltage_indicator = 1;  //Make sure the LED blink pattern state is reset when trigger is released so we get clean blink pattern
                 total_runtime_counter.enable = true;
                 LED_code_cycle_counter.value = 0;
+                
         }
         else if (ISL_GetSpecificBits_cached(ISL.ENABLE_DISCHARGE_FET)  //Same as above but we are already discharging and all conditions are good
             && detect == TRIGGER
@@ -469,7 +462,7 @@ void outputEN(void){
 
                     case 2: 
                         LED_code_cycle_counter.enable = true;
-                        ledBlinkpattern (1, 0b001, 1000, 0, 0, 0, 127);
+                        ledBlinkpattern (1, 0b001, 1000, 0, 0, 0, 32);
                         if (LED_code_cycle_counter.value > 1){
                             startup_led_step++;
                             nonblocking_wait_counter.enable = false;        //Same as resetLEDBlinkPattern but without turning off the LED
@@ -510,7 +503,13 @@ void outputEN(void){
         }
         else {                                                  //Trigger released; WKUP status = 1
             ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);   //Disable discharging
-            state = IDLE;
+            if (need_to_clear_LEDs_for_cell_voltage_indicator == 1){    //Prevents weird things from happening if you release the trigger in the middle of the startup LED sequence
+                resetLEDBlinkPattern();
+                need_to_clear_LEDs_for_cell_voltage_indicator = 0;
+            }
+            if (cellVoltageLEDIndicator()){   //Repeat the cellVoltageLEDIndicator() function until one iteration, when it will return true.
+                state = IDLE;
+            }
         }
     
     //State change cleanup
@@ -593,7 +592,7 @@ void error(void){
         && !current_error_reason.CHARGE_ISL_INT_OVERTEMP_PICREAD 
         && !current_error_reason.CHARGE_THERMISTOR_OVERTEMP_PICREAD 
         && !current_error_reason.TEMP_HYSTERESIS 
-        && detect == NONE
+        && ((detect == NONE) || (full_discharge_trigger_error && detect == CHARGER))    //if the error reason was being fully discharged, allow exit loop if device is connected to charger
         && discharge_current_mA == 0
             ){
             if (!LED_code_cycle_counter.enable){
@@ -704,16 +703,19 @@ void main(void)
 {
     
     
+    
     init();
     
     while (1)
     {
+        CLRWDT();
+        
         #ifdef __DEBUG
         loop_counter++;
         #endif  
         
         if (!ISL_GetSpecificBits(ISL.WKPOL)){//If somehow the ISL was reset and so WKPOL isn't correct, reinitialize everything and clear the I2C bus.
-            __debug_break();
+            //__debug_break();
             I2C1_Init();
             ClearI2CBus();
             I2C_ERROR_FLAGS = 0;    //Clear error flags
@@ -723,10 +725,6 @@ void main(void)
         ISL_calcCellStats();
         RecordDetectHistory();
         detect = checkDetect();
-        
-//        if (state == IDLE && detect == TRIGGER){
-//            __debug_break();
-//        }
         isl_int_temp = ISL_GetInternalTemp();
         thermistor_temp = getThermistorTemp(modelnum);
         
@@ -745,12 +743,12 @@ void main(void)
         ISL_Read_Register(FETControl);  //Get current FET status
         discharge_current_mA = dischargeIsense_mA();
         
-            //TODO: Add I2C error check here
-//        if (I2C_ERROR_FLAGS != 0){
-//            while(true){
-//                Set_LED_RGB(0b100, 1023);
-//            }
-//        }
+        //I2C error handling
+        if (I2C_ERROR_FLAGS != 0){
+            __nop();
+            __nop();
+            RESET();
+        }
         
         switch(state){
             case INIT:

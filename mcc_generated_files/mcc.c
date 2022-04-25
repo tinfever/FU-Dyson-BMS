@@ -76,8 +76,8 @@ void OSCILLATOR_Initialize(void)
 
 void WDT_Initialize(void)
 {
-    // WDTPS 1:65536; SWDTEN OFF; 
-    WDTCON = 0x16;
+    // WDTPS 1:16384; SWDTEN OFF; 
+    WDTCON = 0x12;
 }
 
 /**

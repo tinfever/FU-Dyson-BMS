@@ -15,11 +15,16 @@
 #define ASCII_FIRMWARE_VERSION 0x31;      //ASCII '1' = 0x31. This must be manually determined so the EEPROM section is human readable.
 
 //Uncomment these lines while in debug mode to disable certain temperature checks for testing.
-#ifdef __DEBUG  //Make sure these only work in debug mode
+//#ifdef __DEBUG  //Make sure these only work in debug mode
 //#define __DEBUG_DISABLE_PIC_THERMISTOR_READ       //Uncomment for testing
 //#define __DEBUG_DISABLE_PIC_ISL_INT_READ          //Uncomment for testing
 //#define __DEBUG_DONT_SLEEP
-#endif
+//#endif
+
+//EEPROM Formatting Parameters
+#define EEPROM_START_OF_EVENT_LOGS_ADDR 0x20
+const uint8_t EEPROM_NEXT_BYTE_AVAIL_STORAGE_ADDR = 0x19;
+const uint8_t EEPROM_RUNTIME_TOTAL_STARTING_ADDR = 0x1C;    //32-bit runtime counter to be held in 0x1C, 0x1D, 0x1E, 0x1F
 
 #define redLED PSTR1CONbits.STR1C
 #define greenLED PSTR1CONbits.STR1A
@@ -56,7 +61,7 @@
 const uint16_t VREF_VOLTAGE_mV = 2500;
 
 const uint8_t MAX_CHARGE_TEMP_C = 50;           //Celsius. MAX_DISCHARGE_TEMP_C must be greater than MAX_CHARGE_TEMP_C for it to work correctly.
-const uint8_t MAX_DISCHARGE_TEMP_C = 60;        //Celsius
+const uint8_t MAX_DISCHARGE_TEMP_C = 70;        //Celsius. Per LG 18650 HD2C datasheet. 60C limit was hit when doing full current 20A discharge test.
 const uint8_t MIN_TEMP_C = 7; //Celsius. 7 degrees C is the lowest value in SV11 thermistor LUT. Must be > HYSTERESIS_TEMP_C to avoid potential overflow issues in getThermistorTemp
 const uint16_t MAX_DISCHARGE_CURRENT_mA = 30000;
 const uint16_t MIN_DISCHARGE_CELL_VOLTAGE_mV = 3000;
@@ -83,7 +88,7 @@ const uint16_t IDLE_SLEEP_TIMEOUT = 938;
 
 /* Length of time to wait while in an error state before going to sleep
  1876*32ms = 60.032s */
-const uint16_t ERROR_SLEEP_TIMEOUT = 938;
+const uint16_t ERROR_SLEEP_TIMEOUT = 1876;
 
 /* Length of time there must be no errors before exiting error state
  94 * 32ms = 3.008s */
@@ -106,7 +111,7 @@ const uint8_t NUM_OF_LED_CODES_AFTER_FAULT_CLEAR = 3;
  * It won't help you if your cells are going out of balance though. */
 #define SLEEP_AFTER_CHARGE_COMPLETE
 
-#define EEPROM_START_OF_EVENT_LOGS_ADDR 0x20
+
 
 
 

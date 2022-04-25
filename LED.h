@@ -13,6 +13,7 @@ void ledBlinkpattern (uint8_t num_blinks, uint8_t led_color_rgb, uint16_t blink_
 void resetLEDBlinkPattern (void);
 void Set_LED_RGB(uint8_t RGB_en, uint16_t PWM_val);
 bool cellDeltaLEDIndicator (void);
+bool cellVoltageLEDIndicator (void);
 
 
 

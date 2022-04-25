@@ -58,8 +58,8 @@ void setErrorReasonFlags(volatile error_reason_t *datastore){
     datastore->DISCHARGE_OC_SHUNT_PICREAD |= !(discharge_current_mA < MAX_DISCHARGE_CURRENT_mA);
     datastore->CHARGE_ISL_INT_OVERTEMP_PICREAD |= (state == CHARGING && !(isl_int_temp < MAX_CHARGE_TEMP_C));
     datastore->CHARGE_THERMISTOR_OVERTEMP_PICREAD |= (state == CHARGING && !(thermistor_temp < MAX_CHARGE_TEMP_C));
-    datastore->ERROR_TIMEOUT_WAIT |= (state == ERROR && !(error_timeout_wait_counter.enable && error_timeout_wait_counter.value > ERROR_EXIT_TIMEOUT));
-    datastore->LED_BLINK_CODE_MIN_PRESENTATIONS |= (state == ERROR && !(LED_code_cycle_counter.enable && LED_code_cycle_counter.value > NUM_OF_LED_CODES_AFTER_FAULT_CLEAR));
+    datastore->ERROR_TIMEOUT_WAIT |= (state == ERROR && error_timeout_wait_counter.enable && !(error_timeout_wait_counter.value > ERROR_EXIT_TIMEOUT));
+    datastore->LED_BLINK_CODE_MIN_PRESENTATIONS |= (state == ERROR && LED_code_cycle_counter.enable && !(LED_code_cycle_counter.value > NUM_OF_LED_CODES_AFTER_FAULT_CLEAR));
                     
     datastore->DETECT_MODE = detect;
     

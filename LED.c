@@ -152,3 +152,32 @@ bool cellDeltaLEDIndicator (void){
         return false;
     }
 }
+
+bool cellVoltageLEDIndicator (void){
+    static bool loaded_num_green_blinks = 0;
+    static uint8_t wait_count = 0;
+    uint8_t num_green_blinks = 0;
+    
+    if (wait_count < 5){
+        wait_count++;
+        return false;   //Let three main loop iterations pass to give voltage measurements a chance to stabilize after a high current load which would cause lower than normal battery voltage readings.
+    }
+    else if (!loaded_num_green_blinks){
+        num_green_blinks = (uint8_t) ( (cellstats.mincell_mV-3000) / 200 + 1);      // Min cell < 3.2V = 1 blinks, mincell < 3.4 = 2 blink, min cell < 3.6V = 3 blinks, min cell < 3.8V = 4 blinks, min cell < 4V = 5 blinks, mincell < 4.2V = 6 blinks.
+        loaded_num_green_blinks = 1;    //This reads and holds the number of blinks to be presented so the blink count won't change even if cell voltages do.
+    }
+    
+    
+    
+    LED_code_cycle_counter.enable = true;
+    ledBlinkpattern (num_green_blinks, 0b010, 250, 250, 500, 500, 0);
+    if (LED_code_cycle_counter.value > 1){
+        resetLEDBlinkPattern();
+        wait_count = 0;
+        loaded_num_green_blinks = 0;
+        return true;
+    }
+    else {
+        return false;
+    }
+}

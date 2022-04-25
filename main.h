@@ -22,9 +22,9 @@ enum {
 } state;
 
 typedef enum{
-    NONE = 0,
-    TRIGGER,
-    CHARGER
+    NONE = 0,       //0b00
+    TRIGGER = 1,    //0b01
+    CHARGER = 2     //0b10
 } detect_t;
 
 detect_t detect = 0;
@@ -49,8 +49,7 @@ bool full_discharge_flag = false;
 uint16_t discharge_current_mA = 0;
 
 
-const uint8_t EEPROM_NEXT_BYTE_AVAIL_STORAGE_ADDR = 0x18;
-const uint8_t EEPROM_RUNTIME_TOTAL_STARTING_ADDR = 0x1C;    //32-bit runtime counter to be held in 0x1C, 0x1D, 0x1E, 0x1F
+
     
 
 
