@@ -3,7 +3,7 @@
     <type>com.microchip.mplab.nbide.embedded.makeproject</type>
     <configuration>
         <data xmlns="http://www.netbeans.org/ns/make-project/1">
-            <name>Dyson_SV09_V6_BMS_Firmware_V0.01</name>
+            <name>FU-Dyson-BMS</name>
             <creation-uuid>726f0d98-f14d-45d2-8147-e618019c7afe</creation-uuid>
             <make-project-type>0</make-project-type>
             <c-extensions>c</c-extensions>
