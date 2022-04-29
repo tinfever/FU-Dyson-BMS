@@ -1,48 +1,17 @@
-/**
-  Generated Main Source File
-
-  Company:
-    Microchip Technology Inc.
-
-  File Name:
-    main.c
-
-  Summary:
-    This is the main file generated using PIC10 / PIC12 / PIC16 / PIC18 MCUs
-
-  Description:
-    This header file provides implementations for driver APIs for all modules selected in the GUI.
-    Generation Information :
-        Product Revision  :  PIC10 / PIC12 / PIC16 / PIC18 MCUs - 1.81.7
-        Device            :  PIC16LF1847
-        Driver Version    :  2.00
-*/
-
 /*
-    (c) 2018 Microchip Technology Inc. and its subsidiaries. 
-    
-    Subject to your compliance with these terms, you may use Microchip software and any 
-    derivatives exclusively with Microchip products. It is your responsibility to comply with third party 
-    license terms applicable to your use of third party software (including open source software) that 
-    may accompany Microchip software.
-    
-    THIS SOFTWARE IS SUPPLIED BY MICROCHIP "AS IS". NO WARRANTIES, WHETHER 
-    EXPRESS, IMPLIED OR STATUTORY, APPLY TO THIS SOFTWARE, INCLUDING ANY 
-    IMPLIED WARRANTIES OF NON-INFRINGEMENT, MERCHANTABILITY, AND FITNESS 
-    FOR A PARTICULAR PURPOSE.
-    
-    IN NO EVENT WILL MICROCHIP BE LIABLE FOR ANY INDIRECT, SPECIAL, PUNITIVE, 
-    INCIDENTAL OR CONSEQUENTIAL LOSS, DAMAGE, COST OR EXPENSE OF ANY KIND 
-    WHATSOEVER RELATED TO THE SOFTWARE, HOWEVER CAUSED, EVEN IF MICROCHIP 
-    HAS BEEN ADVISED OF THE POSSIBILITY OR THE DAMAGES ARE FORESEEABLE. TO 
-    THE FULLEST EXTENT ALLOWED BY LAW, MICROCHIP'S TOTAL LIABILITY ON ALL 
-    CLAIMS IN ANY WAY RELATED TO THIS SOFTWARE WILL NOT EXCEED THE AMOUNT 
-    OF FEES, IF ANY, THAT YOU HAVE PAID DIRECTLY TO MICROCHIP FOR THIS 
-    SOFTWARE.
+* FU-Dyson-BMS	-	(unofficial) Firmware Upgrade for Dyson BMS - V6/V7 Vacuums
+* Copyright (C) 2022 tinfever
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+* 
+* You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+* 
+* The author can be contacted at tinfever6@(insert-everyone's-favorite-google-email-domain).com
+* 
+* NOTE: As an addendum to the GNU General Public License, any hardware using code or information from this project must also make publicly available complete electrical schematics and a bill of materials for such hardware.
 */
-
-
-
 
 #include "mcc_generated_files/mcc.h"
 #include "main.h"
@@ -206,15 +175,14 @@ void sleep(void){
     __delay_us(50);
     ISL_SetSpecificBits(ISL.SLEEP, 1);
      __delay_ms(250);
-    //ISL_SetSpecificBits(ISL.FORCE_POR, 1);  //If the ISL didn't actually sleep when we just told it to, something is seriously wrong. The best we can do is to try to reset the ISL.
-     ClearI2CBus();
+     ClearI2CBus(); //If the ISL didn't actually sleep when we just told it to, something is seriously wrong. The best we can do is to try to reset the ISL.
      ISL_Init();    //This includes a POR reset of the ISL
 
 }
 
 void idle(void){
-    static bool previous_detect_not_charger = 0;
     static bool previous_detect_was_charger = 0;
+    static bool show_cell_delta_LEDs = 1;
     
     if (detect == TRIGGER                       //Trigger is pulled
         && minCellOK()          //Min cell is not below low voltage cut out of 3V
@@ -234,38 +202,29 @@ void idle(void){
             && maxCellOK()          //Max cell < 4.20V
             && ISL_GetSpecificBits_cached(ISL.WKUP_STATUS) //Make sure WKUP = 1 meaning charger connected or trigger pressed
             && safetyChecks()
-            /* Because detect is is only based on the voltage applied to the
-             * detect pin, it doesn't take in to account WKUP_STATUS on the ISL.
-             * Since the ISL WKUP_STATUS can lag behind, this means detect may
-             * equal CHARGER for several loop cycles before WKUP_STATUS finally
-             * is asserted and we can enter this section. We could modify the
-             * detect function code to check WKUP_STATUS too or we could
-             * implement a longer detect history to watch for certain detect
-             * transitions. I (probably incorrectly) chose the latter.*/
         ){
-            if (CheckStateInDetectHistory(CHARGER)){                //if the last four detect cycles weren't CHARGER. CHARGER is 0b10 so 0b10101010 is CHARGER in all four detect_history positions
-                previous_detect_not_charger = true;     //Check detect history so we only run the cell delta LED codes when the charger is actually connected, not because the cells have self discharged enough while on the charger to cause charging to restart
-            } 
-
-            if (!previous_detect_not_charger    //We were connected to the charger the whole time
-                || (previous_detect_not_charger && cellDeltaLEDIndicator())   // Or we weren't connected to the charger previously and/so we've also iterated one cell delta LED indication code
-            ){      
-                state = CHARGING;
-            }
+        if ((show_cell_delta_LEDs == 1 && cellDeltaLEDIndicator())
+            || !show_cell_delta_LEDs
+            ) {
+            state = CHARGING;
+        }
+        
+        
     }
     else if ((detect == NONE                         //Start sleep counter if we are idle with no charger or trigger, but no errors
-            #ifdef SLEEP_AFTER_CHARGE_COMPLETE
-            || (detect == CHARGER && charge_complete_flag)      //Also sleep after charge is complete while we are on the charger, if configured.
-            #endif
+#ifdef SLEEP_AFTER_CHARGE_COMPLETE
+            || (detect == CHARGER && charge_complete_flag) //Also sleep after charge is complete while we are on the charger, if configured.
+#endif
             )
-            #ifndef SLEEP_AFTER_CHARGE_COMPLETE
+#ifndef SLEEP_AFTER_CHARGE_COMPLETE
             && ISL_GetSpecificBits_cached(ISL.WKUP_STATUS) == 0
-            #endif
+#endif
             && sleep_timeout_counter.enable == false
             && safetyChecks()
             ){
                 sleep_timeout_counter.value = 0;        //Clear and start sleep counter
                 sleep_timeout_counter.enable = true;
+                show_cell_delta_LEDs = 1;   //Reset this just in case
     }
     else if (!safetyChecks()){                        //Somehow there was an error  
         state = ERROR;
@@ -286,11 +245,13 @@ void idle(void){
         if (CheckStateInDetectHistory(CHARGER)){                                //Show cell delta code when charger removed after complete charge
             previous_detect_was_charger = true;                             //This flag is set if we are transitioning from detect == CHARGER to detect == NONE
         }
-        if (previous_detect_was_charger && cellDeltaLEDIndicator()){       //If the Charger -> None transition was detected, keep checking/running the cellDeltaLEDIndicator function until it is complete. 
+        
+        if ((previous_detect_was_charger && cellDeltaLEDIndicator())
+            || !previous_detect_was_charger    
+        ){       //If the Charger -> None transition was detected, keep checking/running the cellDeltaLEDIndicator function until it is complete. 
             previous_detect_was_charger = false;                            //Then remove flag
-        }
-        else if (!previous_detect_was_charger){                             //Once flag is removed, or if flag was never set, show normal green idle LED
             Set_LED_RGB(0b010, 1023); //LED Green
+            show_cell_delta_LEDs = 1; //Set this just in case
         }
     }
     else if (detect == TRIGGER && ISL_GetSpecificBits_cached(ISL.WKUP_STATUS) && !full_discharge_flag){    //trigger is pulled but we didn't enable output, and it isn't because there was an error or the pack is fully discharged = Yellow LED
@@ -302,7 +263,12 @@ void idle(void){
     
     //If the charger is connected, we are in a fully charged idle state, the user holds down the trigger, and then disconnects the charger while holding the trigger, the cell balance LED indicator is not shown. Not worth it to implement.
     
-    if ( (charge_complete_flag == true && cellstats.maxcell_mV < PACK_CHARGE_NOT_COMPLETE_THRESH_mV) || (detect != CHARGER)){      //If the max cell voltage is below 4100mV and the pack is marked as fully charged, unmark it as charged. Also, if removed from charger, clear charge complete flag.
+    if (charge_complete_flag == true && cellstats.maxcell_mV < PACK_CHARGE_NOT_COMPLETE_THRESH_mV){      //If the max cell voltage is below 4100mV and the pack is marked as fully charged, unmark it as charged.
+        charge_complete_flag = false;
+        show_cell_delta_LEDs = 0;
+    }
+    
+    if (detect != CHARGER){                  //Also, if removed from charger, clear charge complete flag.
         charge_complete_flag = false;
     }
     
@@ -321,8 +287,8 @@ void idle(void){
     if (state != IDLE) {
         sleep_timeout_counter.enable = false; //We aren't going to be sleeping soon
         resetLEDBlinkPattern();
-        previous_detect_not_charger = false;
         previous_detect_was_charger = false;
+        show_cell_delta_LEDs = 1;
     }
     
 }
@@ -370,9 +336,7 @@ void charging(void){
     else{                                   //charger removed before complete charge
         ISL_SetSpecificBits(ISL.ENABLE_CHARGE_FET, 0); //Disable Charging
         charge_duration_counter.enable = false;         //Stop charge timer
-        if (cellDeltaLEDIndicator()){   //Repeat the cellDeltaLEDIndicator() function until one iteration, when it will return true.
-            state = IDLE;
-        }
+        state = IDLE;
         
         
     }
@@ -399,9 +363,7 @@ void chargingWait(void){
     
     if (detect != CHARGER){                    //Charger removed
         charge_wait_counter.enable = false;
-        if (cellDeltaLEDIndicator()){   //Repeat the cellDeltaLEDIndicator() function until one iteration, when it will return true.
-            state = IDLE;
-        }
+        state = IDLE;
     }
     
     if (!safetyChecks()){  //Somehow there was an error
@@ -430,6 +392,7 @@ void outputEN(void){
                 startup_led_step = 0;
                 resetLEDBlinkPattern();
                 need_to_clear_LEDs_for_cell_voltage_indicator = 1;  //Make sure the LED blink pattern state is reset when trigger is released so we get clean blink pattern
+                runonce = 0;
                 total_runtime_counter.enable = true;
                 LED_code_cycle_counter.value = 0;
                 
@@ -441,6 +404,8 @@ void outputEN(void){
             && safetyChecks()
                 ){
                 //Fancy start up LEDs
+                need_to_clear_LEDs_for_cell_voltage_indicator = 1;
+                runonce = 0;
                 switch(startup_led_step){
                     case 0:
                         LED_code_cycle_counter.enable = true;
@@ -488,12 +453,13 @@ void outputEN(void){
         }
         else if (detect == CHARGER){    //Charger attached while trigger was pulled
             ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);   //Disable discharging
+            need_to_clear_LEDs_for_cell_voltage_indicator = 1;
             
             if (!runonce){
-                LED_code_cycle_counter.value = 0;
+                resetLEDBlinkPattern();
                 LED_code_cycle_counter.enable = true;
                 runonce = true;
-            }
+            } 
             
             uint8_t num_blinks = FIRMWARE_VERSION;
             ledBlinkpattern (num_blinks, 0b111, 500, 500, 1000, 1000, 0);
@@ -503,6 +469,7 @@ void outputEN(void){
         }
         else {                                                  //Trigger released; WKUP status = 1
             ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);   //Disable discharging
+            runonce = 0;
             if (need_to_clear_LEDs_for_cell_voltage_indicator == 1){    //Prevents weird things from happening if you release the trigger in the middle of the startup LED sequence
                 resetLEDBlinkPattern();
                 need_to_clear_LEDs_for_cell_voltage_indicator = 0;
@@ -521,7 +488,8 @@ void outputEN(void){
         
         
         startup_led_step = 0;
-        runonce = false;
+        runonce = 0;
+        need_to_clear_LEDs_for_cell_voltage_indicator = 1;
         resetLEDBlinkPattern();
     }
     

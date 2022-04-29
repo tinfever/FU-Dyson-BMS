@@ -23,6 +23,7 @@
       <itemPath>main.h</itemPath>
       <itemPath>LED.h</itemPath>
       <itemPath>FaultHandling.h</itemPath>
+      <itemPath>i2c.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -46,7 +47,6 @@
       </logicalFolder>
       <itemPath>main.c</itemPath>
       <itemPath>i2c.c</itemPath>
-      <itemPath>i2c.h</itemPath>
       <itemPath>isl94208.c</itemPath>
       <itemPath>thermistor.c</itemPath>
       <itemPath>LED.c</itemPath>

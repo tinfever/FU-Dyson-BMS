@@ -1,0 +1,9 @@
+The specification PDF for the battery cells can be found here:
+
+https://keeppower.com.ua/download/01-2016/20140626-LRB-PS-LG18650HD2C-Rev1.pdf
+https://www.megacellmonitor.com/pdf/vendor_specs/SPEC_LG_LGDAHD2C1865_ICR18650HD2C.pdf
+
+You can also search for "BCY-PS-HD2C-Rev1"
+
+The cells are "LG Lithium Ion 18650 HD2C 2100mAh"
+Model: 18650HD2C
