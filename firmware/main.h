@@ -55,7 +55,7 @@ uint8_t thermistor_temp;
 bool charge_complete_flag = false;
 bool full_discharge_flag = false;
 uint16_t discharge_current_mA = 0;
-
+uint8_t I2C_error_counter = 0;
 
 
     
@@ -84,6 +84,7 @@ bool CheckStateInDetectHistory(detect_t detect_val);
 
 uint16_t readADCmV(adc_channel_t channel);
 void WriteTotalRuntimeCounterToEEPROM(uint8_t starting_addr);
+void ClearI2CBus(void);
 
 
 

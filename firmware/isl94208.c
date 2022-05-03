@@ -14,6 +14,8 @@
 */
 
 #include "isl94208.h"
+#include "FaultHandling.h"
+#include "main.h"
 
 
 //Private functions
@@ -41,8 +43,12 @@ void ISL_Init(void){
      */
     ISL_Write_Register(ChargeSet, 0b01001100);
    
+    ISL_Write_Register(AnalogOut, 0b11000000);  //Set User Flag 1 and 0 so we can detect if ISL browns out
+    
     ISL_SetSpecificBits(ISL.WKPOL, 1);  //Set wake signal to be active high. Trigger pulled > NC switch unpressed > circuit closed > WKUP line pulled high
     ISL_SetSpecificBits( (uint8_t[]){WriteEnable, 5, 3}, 0b000);    //Clear all three feature set, charge set, and discharge set write bits
+    ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);       //Make sure the pack is turned off in case we had some weird reset
+    ISL_SetSpecificBits(ISL.ENABLE_CHARGE_FET, 0);
 }
 
 uint8_t ISL_Read_Register(isl_reg_t reg){  //Allows easily retrieving an entire register. Ex. ISL_Read_Register(ISL_CONFIG_REG); result = ISL_RegData[Config]
@@ -161,6 +167,18 @@ void ISL_calcCellStats(void){
 int16_t ISL_GetInternalTemp(void){
     int16_t adcval = (int16_t) ISL_GetAnalogOutmV(AO_INTTEMP);
     return (int16_t) (2 * ( 1310 - adcval ) / 7) + 25;    //ISL 1.31V at 25C, -3.5mV/C temp increase. Converted to mV and multiplied -3.5mV x 2 to stay as int. Using signed int so vacuum still works below freezing.
+}
+
+bool ISL_BrownOutHandler(void){
+    if (!( ISL_GetSpecificBits_cached(ISL.USER_FLAG_0) && ISL_GetSpecificBits_cached(ISL.USER_FLAG_1) )){//Check if both user flag bits are set like they should be
+            //ISL must have browned out. Likely due to short circuit protection kicking in.
+            setErrorReasonFlags(&past_error_reason);
+            I2C1_Init();    //Attempting to recover I2C bus as a last ditch effort to turn off MOSFETs before erroring out. Might not be useful.
+            ClearI2CBus();
+            state = ERROR;
+            return true;
+        }
+    return false;
 }
 
 static uint16_t _ConvertADCtoMV(uint16_t adcval){

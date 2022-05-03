@@ -1,0 +1,10 @@
+firmware/.generated_files/
+firmware/build/
+firmware/dist/
+firmware/nbproject/Makefile-*
+firmware/nbproject/Package-*
+firmware/nbproject/private/
+firmware/.ca/
+firmware/.vscode/
+EEPROM-parsing-tool/eeprom dumps/
+*.bkp

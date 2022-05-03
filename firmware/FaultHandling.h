@@ -34,6 +34,7 @@ typedef struct {
     bool TEMP_HYSTERESIS : 1;
     bool ERROR_TIMEOUT_WAIT : 1;
     bool LED_BLINK_CODE_MIN_PRESENTATIONS : 1;
+    bool ISL_BROWN_OUT : 1;
     detect_t DETECT_MODE;
 } error_reason_t;
 

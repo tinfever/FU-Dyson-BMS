@@ -70,9 +70,9 @@ for i in range(len(combined_list)//6):
     if error_bits[11] == "1":
         error_meaning.append("TEMP_HYSTERESIS")
     if error_bits[12] == "1":
-        error_meaning.append("ERROR_TIMEOUT_WAIT")
+        error_meaning.append("ISL_BROWN_OUT")
     if error_bits[13] == "1":
-        error_meaning.append("LED_BLINK_CODE_MIN_PRESENTATIONS")
+        error_meaning.append("CRITICAL_I2C_ERROR")
 
     detect_mode = (''.join(error_bits[14:])),
     detect_mode = int(detect_mode[0], 2)

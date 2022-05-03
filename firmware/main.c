@@ -147,8 +147,7 @@ void init(void){
         ClearI2CBus();
     }
     
-    ISL_SetSpecificBits(ISL.ENABLE_DISCHARGE_FET, 0);       //Make sure the pack is turned off in case we had some weird reset
-    ISL_SetSpecificBits(ISL.ENABLE_CHARGE_FET, 0);
+    
     modelnum = checkModelNum();    
     
     //Load 32-bit total runtime counter from EEPROM
@@ -504,9 +503,13 @@ void error(void){
     setErrorReasonFlags(&current_error_reason);
     
     static bool full_discharge_trigger_error = false;
-    
     if (detect == TRIGGER && full_discharge_flag){
         full_discharge_trigger_error = true;
+    }
+    
+    static bool critical_i2c_error = false;
+    if (!(I2C_error_counter < CRITICAL_I2C_ERROR_THRESH)){
+        critical_i2c_error = true;
     }
     
     if (!EEPROM_Event_Logged && !full_discharge_trigger_error){    //full_discharge_trigger_error isn't an actual error that needs recording
@@ -529,9 +532,9 @@ void error(void){
         data_byte_2 |= past_error_reason.DISCHARGE_OC_SHUNT_PICREAD << 7;
         data_byte_2 |= past_error_reason.CHARGE_ISL_INT_OVERTEMP_PICREAD << 6;
         data_byte_2 |= past_error_reason.CHARGE_THERMISTOR_OVERTEMP_PICREAD << 5;
-        data_byte_2 |= past_error_reason.TEMP_HYSTERESIS << 4;                          //These last three data points are probably useless
-        data_byte_2 |= past_error_reason.ERROR_TIMEOUT_WAIT << 3;
-        data_byte_2 |= past_error_reason.LED_BLINK_CODE_MIN_PRESENTATIONS  << 2;
+        data_byte_2 |= past_error_reason.TEMP_HYSTERESIS << 4;                          //This point might be useless
+        data_byte_2 |= past_error_reason.ISL_BROWN_OUT << 3;
+        data_byte_2 |= critical_i2c_error  << 2;
         data_byte_2 |= (past_error_reason.DETECT_MODE & 0b00000011);
         
         //Write data to EEPROM
@@ -546,6 +549,61 @@ void error(void){
         
         DATAEE_WriteByte(EEPROM_NEXT_BYTE_AVAIL_STORAGE_ADDR, future_starting_write_addr);   //Record next available free space for future event records
         EEPROM_Event_Logged = true;
+    }
+    
+        /* This is a dirty hack to handle a possible hardware bug where:
+         * 1) The trigger is pulled and output is enabled as usual
+         * 2) The short circuit protection kicks in due to an apparent short
+         * 3) The output is disabled as expected
+         * 4) The ISL94208 RESETS ITSELF AND DOES NOT PROVIDE THE SHORT CIRCUIT ERROR FLAG. Thus it is not obvious what happened.
+         * 5) The routine I2C commands to the ISL fail while it is resetting, causing I2C errors.
+         * 6) Previously, I2C errors were handled by resetting the PIC. So the PIC is reset.
+         * 7) The PIC starts up and sees the trigger is pulled and the ISL is presenting no error flags.
+         * 8) Wash, rinse, repeat. 
+         * 
+         * Now, we are setting user flag bits 0 and 1 during setup and routinely checking to make sure those are still set.
+         * If those are ever cleared, that means the ISL reset itself. This causes the ISL_BROWN_OUT error code.
+         * 
+         * This could probably be integrated in to the normal fault handling system much more cleanly,
+         * and without having to create an infinite loop and duplicate some of the main loop routines.
+         * However, at this point I can't be bothered and so I've just hacked this in.
+         * This is the simplest way of handling a situation where I'm not sure I can trust anything is initialized the way it should be.
+         *  
+        */
+    if (critical_i2c_error || past_error_reason.ISL_BROWN_OUT){         
+        LED_code_cycle_counter.value = 0;
+        while(1){                                               //It's called critical for a reason
+            if (!detect){
+                LED_code_cycle_counter.enable = true;       //Start led error code sequence after trigger released and/or charger disconnected
+            } 
+            else{
+                LED_code_cycle_counter.value = 0;           //Attaching charger or pulling trigger will reset LED code count
+                LED_code_cycle_counter.enable = false;
+            }
+
+            if (LED_code_cycle_counter.value > NUM_OF_LED_CODES_AFTER_FAULT_CLEAR){
+                RESET();        //Once required number of error codes are shown, use the nuclear option.
+            }
+            
+            
+            if (past_error_reason.ISL_BROWN_OUT){
+                ledBlinkpattern(16, 0b100, 500, 500, 1000, 1000, 0);    //ISL brown out
+            }
+            else{
+                ledBlinkpattern(15, 0b100, 500, 500, 1000, 1000, 0);    //critical i2c error
+            }
+            
+            if (TMR4_HasOverflowOccured()){         //Every 32ms //Since we aren't going in to main loop again, we still have to service this counter for the LED code to work
+                if (nonblocking_wait_counter.enable){
+                    nonblocking_wait_counter.value++;
+                }
+            }
+            
+            CLRWDT();   //We also have to clear the WDT
+            
+            detect = checkDetect();     //And check the latest detect value
+            
+        }
     }
     
     if (!current_error_reason.ISL_INT_OVERTEMP_FLAG
@@ -668,26 +726,19 @@ void WriteTotalRuntimeCounterToEEPROM(uint8_t starting_addr){       //Make sure 
 }
 
 void main(void)
-{
-    
-    
-    
+{    
     init();
     
     while (1)
     {
         CLRWDT();
-        
+        //__delay_ms(5);
         #ifdef __DEBUG
         loop_counter++;
         #endif  
-        
-        if (!ISL_GetSpecificBits(ISL.WKPOL)){//If somehow the ISL was reset and so WKPOL isn't correct, reinitialize everything and clear the I2C bus.
-            //__debug_break();
-            I2C1_Init();
-            ClearI2CBus();
-            I2C_ERROR_FLAGS = 0;    //Clear error flags
-        }
+
+        ISL_Read_Register(AnalogOut); //Get Analog Out register that contains user bits
+        ISL_BrownOutHandler();
         
         ISL_ReadAllCellVoltages();
         ISL_calcCellStats();
@@ -709,14 +760,27 @@ void main(void)
         ISL_Read_Register(Config);      //Get config register so we can check WKUP status later on
         ISL_Read_Register(Status);      //Get Status register to check for error flags
         ISL_Read_Register(FETControl);  //Get current FET status
+        ISL_Read_Register(AnalogOut); //Get Analog Out register that contains user bits
         discharge_current_mA = dischargeIsense_mA();
         
-        //I2C error handling
-        if (I2C_ERROR_FLAGS != 0){
-            __nop();
-            __nop();
-            RESET();
+        if (ISL_BrownOutHandler()){
+            //do nothing
         }
+        else if (I2C_ERROR_FLAGS != 0){     //I2C error handling
+            I2C_error_counter++;
+
+            if (I2C_error_counter < CRITICAL_I2C_ERROR_THRESH) {
+                I2C1_Init();
+                ClearI2CBus(); //Clear error flags  //First try just clearing I2C bus (which will also POR reset ISL94208)  
+                continue; //Then go again from the top.
+            } else {
+                state = ERROR;
+            }
+        } else {        //If we were successful this time, clear the error counter.
+            I2C_error_counter = 0;
+        }
+        
+        
         
         switch(state){
             case INIT:

@@ -119,7 +119,7 @@ const uint8_t NUM_OF_LED_CODES_AFTER_FAULT_CLEAR = 3;
 /* Number of samples to include in the cell voltage rolling averaging*/
 #define CELLVOLTAGE_AVERAGE_WINDOW_SIZE 4
 
-
+const uint8_t CRITICAL_I2C_ERROR_THRESH = 2;    //If there are 2 consecutive I2C error results, even after attempting to recover, set flag for critical I2C error, show blink code, and then RESET.
 
 
 

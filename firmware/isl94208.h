@@ -191,7 +191,7 @@ uint16_t ISL_GetAnalogOutmV(isl_analogout_t value);
 void ISL_ReadAllCellVoltages(void);
 int16_t ISL_GetInternalTemp(void);
 void ISL_calcCellStats(void);
-
+bool ISL_BrownOutHandler(void);
 
 
 
