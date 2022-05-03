@@ -738,6 +738,7 @@ void main(void)
         #endif  
 
         ISL_Read_Register(AnalogOut); //Get Analog Out register that contains user bits
+        ISL_Read_Register(FeatureSet); //Get Feature Set reg to check WKPOL
         ISL_BrownOutHandler();
         
         ISL_ReadAllCellVoltages();
@@ -761,6 +762,7 @@ void main(void)
         ISL_Read_Register(Status);      //Get Status register to check for error flags
         ISL_Read_Register(FETControl);  //Get current FET status
         ISL_Read_Register(AnalogOut); //Get Analog Out register that contains user bits
+        ISL_Read_Register(FeatureSet); //Get Feature Set reg to check WKPOL
         discharge_current_mA = dischargeIsense_mA();
         
         if (ISL_BrownOutHandler()){
