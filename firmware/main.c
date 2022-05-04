@@ -552,16 +552,24 @@ void error(void){
     }
     
         /* This is a dirty hack to handle a possible hardware bug where:
+         * 0) Directly short the output (or connect it to multiple electronic loads that appear as a short until they start to limit the current)
          * 1) The trigger is pulled and output is enabled as usual
-         * 2) The short circuit protection kicks in due to an apparent short
-         * 3) The output is disabled as expected
-         * 4) The ISL94208 RESETS ITSELF AND DOES NOT PROVIDE THE SHORT CIRCUIT ERROR FLAG. Thus it is not obvious what happened.
-         * 5) The routine I2C commands to the ISL fail while it is resetting, causing I2C errors.
+         * 2) There is a massive current spike, but not so huge as to trip the short circuit protection (which has to be set to 175A because the next lowest step, 100A, is insufficient for vacuum startup).
+         * 3) The output is disabled, but probably not actually because short-circuit protection kicks in. It takes about 400us, vs the 190us for short circuit protection.
+         * 4) The ISL94208 RESETS ITSELF AND DOES NOT PROVIDE ANY ERROR FLAG. Thus it is not obvious what happened.
+         *      - This is likely because during a hard short, there can be a current spike of 140A+.
+         *      - This causes the voltage on VBACK (attached to cell 1) to drop as low as 1.46V (vs 3-4.2V normally).
+         *      - VCC for the ISL94208, which is connected to Cell 6 drops as low as 10.5V but that's still above the POR voltage
+         *      - This is below the listed typical POR voltage (no minimum provided) for VBACK and is likely causing the reset of the ISL, which wipes all registers.
+         *      - All of this is likely caused because Dyson omitted the 10uF capacitor for VBACK shown in the ISL94208 datasheet (page 32).
+         * 5) The normal I2C commands to the ISL fail while it is resetting, causing I2C errors.
          * 6) Previously, I2C errors were handled by resetting the PIC. So the PIC is reset.
          * 7) The PIC starts up and sees the trigger is pulled and the ISL is presenting no error flags.
-         * 8) Wash, rinse, repeat. 
+         * 8 ) Wash, rinse, repeat. Go to step 1.
          * 
          * Now, we are setting user flag bits 0 and 1 during setup and routinely checking to make sure those are still set.
+         * We also check to make sure WKPOL is still set correctly, because when checking the AnalogOut voltages, we have to write to that register which also contains the user flag bits.
+         * Occasionally, depending on the timing of the I2C errors, the code will write to that register and inadvertently set the User Flag bits again, even though there was an error.
          * If those are ever cleared, that means the ISL reset itself. This causes the ISL_BROWN_OUT error code.
          * 
          * This could probably be integrated in to the normal fault handling system much more cleanly,

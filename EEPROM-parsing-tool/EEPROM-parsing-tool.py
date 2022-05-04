@@ -14,13 +14,32 @@ else:
     programPause = input('Press <ENTER> to quit')
     exit()
 
-
 combined_list = []
 
 with open(filepath) as tsv:
+    i = 0
+    correct_count = 0
     for line in csv.reader(tsv, dialect="excel-tab"):
-        line.pop()
+        if line[0] == format(i, 'X').ljust(2, '0'):
+            correct_count += 1
+        i += 1
+
+if correct_count == i:
+    drop_first_val = True
+else: 
+    drop_first_val = False
+
+
+
+with open(filepath) as tsv:
+    for line in csv.reader(tsv, dialect="excel-tab"):
+        if drop_first_val:
+            line.pop(0)     #Drop first value that contains the line number
+        else:
+            line.pop()      #Drop the last value that would be empty
         combined_list = combined_list + line
+
+
 
 firmware_version_hex = ''.join(combined_list[:24]) 
 firmware_version = bytearray.fromhex(firmware_version_hex).decode()
