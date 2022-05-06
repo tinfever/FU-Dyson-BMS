@@ -9,3 +9,5 @@ firmware/.vscode/
 EEPROM-parsing-tool/eeprom dumps/
 *.bkp
 EEPROM-parsing-tool/.vscode/
+
+firmware/disassembly/

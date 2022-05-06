@@ -63,12 +63,14 @@ const uint8_t EEPROM_RUNTIME_TOTAL_STARTING_ADDR = 0x1C;    //32-bit runtime cou
 #define greenLED PSTR1CONbits.STR1A
 #define blueLED PSTR1CONbits.STR1D
 
-#define SDA RB1
-#define SCL RB4
-#define TRIS_SDA TRISB1
-#define TRIS_SCL TRISB4
-#define ANS_SDA ANSB1
-#define ANS_SCL ANSB4
+#define PORT_SDA PORTBbits.RB1
+#define PORT_SCL PORTBbits.RB4
+#define LAT_SDA LATBbits.LATB1
+#define LAT_SCL LATBbits.LATB4
+#define TRIS_SDA TRISBbits.TRISB1
+#define TRIS_SCL TRISBbits.TRISB4
+#define ANS_SDA ANSELBbits.ANSB1
+#define ANS_SCL ANSELBbits.ANSB4
 
 #define ISL_I2C_ADDR 0x50
 

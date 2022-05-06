@@ -30,13 +30,13 @@ __EEPROM_DATA(0, EEPROM_START_OF_EVENT_LOGS_ADDR, 0, 0, 0, 0, 0, 0);            
 //
 
 void ClearI2CBus(){
-    uint8_t initialState[] = {TRIS_SDA, TRIS_SCL, ANS_SDA, ANS_SCL, SDA, SCL, SSP1CON1bits.SSPEN}; //Backup initial pin setup state
+    uint8_t initialState[] = {TRIS_SDA, TRIS_SCL, ANS_SDA, ANS_SCL, LAT_SDA, LAT_SCL, SSP1CON1bits.SSPEN}; //Backup initial pin setup state
     SSP1CON1bits.SSPEN = 0;     //Disable MSSP if enabled
     TRIS_SDA = 1;     //SDA - Set Data as input
     TRIS_SCL = 1;     //SCL - Set Clock as input = high-impedance output
     ANS_SDA = 0;      //Set both pins as digital
     ANS_SCL = 0;
-    SCL = 0;    //Set SCL PORT to be low, then we'll toggle TRIS to switch between low and high-impedance
+    LAT_SCL = 0;    //Set SCL PORT to be low, then we'll toggle TRIS to switch between low and high-impedance
     
     uint8_t validOnes = 0;
     
@@ -46,7 +46,7 @@ void ClearI2CBus(){
         __delay_us(5); //Wait out clock low period
         TRIS_SCL = 1; //Clock high
         __delay_us(2.5);  //Wait until we are in the mid point of clock high period
-        if (SDA == 1 && SCL == 1){  //Read data and check if SDA is high (idle). Also make sure SCL isn't getting glitched low
+        if (PORT_SDA == 1 && PORT_SCL == 1){  //Read data and check if SDA is high (idle). Also make sure SCL isn't getting glitched low
             validOnes++;
         }
         else{
@@ -58,8 +58,8 @@ void ClearI2CBus(){
     TRIS_SCL = (__bit) initialState[1];
     ANS_SDA = (__bit) initialState[2];
     ANS_SCL = (__bit) initialState[3];
-    SDA = (__bit) initialState[4];
-    SCL = (__bit) initialState[5];
+    LAT_SDA = (__bit) initialState[4];
+    LAT_SCL = (__bit) initialState[5];
     SSP1CON1bits.SSPEN = (__bit) initialState[6];
     if (initialState[6]){
         ISL_Init();
@@ -142,7 +142,7 @@ void init(void){
     ANS_SCL = 0;
     I2C1_Init();
     ClearI2CBus();  //Clear I2C bus once on startup just in case
-    while (SDA == 0 || SCL == 0){   //If bus is still not idle (meaning pins aren't high), which shouldn't be possible, then keep trying to clear bus. Do not pass go. Do not collect $200.
+    while (PORT_SDA == 0 || PORT_SCL == 0){   //If bus is still not idle (meaning pins aren't high), which shouldn't be possible, then keep trying to clear bus. Do not pass go. Do not collect $200.
     //    __debug_break();
         ClearI2CBus();
     }
@@ -579,7 +579,7 @@ void error(void){
          *  
         */
     if (critical_i2c_error || past_error_reason.ISL_BROWN_OUT){         
-        LED_code_cycle_counter.value = 0;
+        resetLEDBlinkPattern();
         while(1){                                               //It's called critical for a reason
             if (!detect){
                 LED_code_cycle_counter.enable = true;       //Start led error code sequence after trigger released and/or charger disconnected
