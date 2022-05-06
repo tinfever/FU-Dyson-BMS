@@ -19,7 +19,14 @@
 #include "config.h"
 #include "isl94208.h"
 
-void ledBlinkpattern (uint8_t num_blinks, uint8_t led_color_rgb, uint16_t blink_on_time_ms, uint16_t blink_off_time_ms, uint16_t starting_blank_time_ms, uint16_t ending_blank_time_ms, int8_t pwm_fade_slope){       //Example: ledBlinkpattern(8, 0b111); would give 8 white LED blinks
+// Example: ledBlinkpattern (3, 0b110, 250, 250, 750, 500, 32);
+// This would give 3 yellow (0b110 RGB) blinks, with 250ms ontime and 250ms off time
+// There would be a 750ms blank time before and 500ms blank time after the three blinks
+// There is a PWM fade slope of positive 32, so each blink will fade in at a rate of +32 to the PWM level per loop iteration
+void ledBlinkpattern (uint8_t num_blinks, uint8_t led_color_rgb,
+                    uint16_t blink_on_time_ms, uint16_t blink_off_time_ms,
+                    uint16_t starting_blank_time_ms, uint16_t ending_blank_time_ms,
+                    int8_t pwm_fade_slope){       
     uint16_t timer_ms = nonblocking_wait_counter.value*32;
     
     static uint8_t max_steps = 0; 
@@ -58,7 +65,9 @@ void ledBlinkpattern (uint8_t num_blinks, uint8_t led_color_rgb, uint16_t blink_
     
     if (step == 0 && timer_ms > next_step_time){                        //starting blank time
         step++;
-        Set_LED_RGB(led_color_rgb, starting_pwm_val);     //Turn on LED
+        if (num_blinks != 0){   // Leave LED off if num_blinks is zero. Next step will be cycle complete.
+            Set_LED_RGB(led_color_rgb, starting_pwm_val);     //Turn on LED
+        }
         next_step_time += blink_on_time_ms;
     }
     else if (step == max_steps-1 && timer_ms > next_step_time){         //ending blank time
@@ -128,8 +137,9 @@ void resetLEDBlinkPattern (void){
     LED_code_cycle_counter.value = 0;
     
 }
-
-void Set_LED_RGB(uint8_t RGB_en, uint16_t PWM_val){  //Accepts binary input 0b000. Bit 2 = Red Enable. Bit 1 = Green Enable. Bit 0 = Red Enable. R.G.B.
+// Accepts binary input 0b000. Bit 2 = Red Enable. Bit 1 = Green Enable. Bit 0 = Red Enable. R.G.B.
+// PWM_val sets PWM brightness level 0-1023
+void Set_LED_RGB(uint8_t RGB_en, uint16_t PWM_val){  
     
     EPWM1_LoadDutyValue(PWM_val);
     
