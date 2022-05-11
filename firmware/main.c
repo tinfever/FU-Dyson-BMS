@@ -497,6 +497,12 @@ void outputEN(void){
 void error(void){
     ISL_Write_Register(FETControl, 0b00000000);     //Make sure all FETs are disabled
     
+    if (total_runtime_counter.enable == true){  // In case normal Output enable clean up was bypassed due to brown out or I2C error
+        total_runtime_counter.enable = false;
+        //Write latest runtime counter value to EEPROM
+        WriteTotalRuntimeCounterToEEPROM(EEPROM_RUNTIME_TOTAL_STARTING_ADDR);
+    }
+    
     static bool EEPROM_Event_Logged = false;
 
     current_error_reason = (error_reason_t){0};
@@ -581,8 +587,14 @@ void error(void){
     if (critical_i2c_error || past_error_reason.ISL_BROWN_OUT){         
         resetLEDBlinkPattern();
         while(1){                                               //It's called critical for a reason
+            ISL_Write_Register(FETControl, 0b00000000);     //Make sure all FETs are disabled
+            if (I2C_ERROR_FLAGS != 0){
+                I2C1_Init();    //Attempting to recover I2C bus as a last ditch effort to turn off MOSFETs before erroring out. Might not be useful.
+                ClearI2CBus();
+            }
+            
             if (!detect){
-                LED_code_cycle_counter.enable = true;       //Start led error code sequence after trigger released and/or charger disconnected
+                LED_code_cycle_counter.enable = true;       //Start led error code sequence after trigger released.
             } 
             else{
                 LED_code_cycle_counter.value = 0;           //Attaching charger or pulling trigger will reset LED code count
@@ -784,6 +796,8 @@ void main(void)
                 ClearI2CBus(); //Clear error flags  //First try just clearing I2C bus (which will also POR reset ISL94208)  
                 continue; //Then go again from the top.
             } else {
+                I2C1_Init();    //Attempting to recover I2C bus as a last ditch effort to turn off MOSFETs before erroring out. Might not be useful.
+                ClearI2CBus();
                 state = ERROR;
             }
         } else {        //If we were successful this time, clear the error counter.

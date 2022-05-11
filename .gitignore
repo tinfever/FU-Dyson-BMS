@@ -11,3 +11,9 @@ EEPROM-parsing-tool/eeprom dumps/
 EEPROM-parsing-tool/.vscode/
 
 firmware/disassembly/
+
+hardware-info/Dyson V6 BMS - PCB 61462 - KiCad Schematic/*.bak
+hardware-info/Dyson V6 BMS - PCB 61462 - KiCad Schematic/*.kicad_pcb-bak
+hardware-info/Dyson V6 BMS - PCB 61462 - KiCad Schematic/*.kicad_sch-bak
+hardware-info/Dyson V6 BMS - PCB 61462 - KiCad Schematic/*backups*/*.zip
+hardware-info/Dyson V6 BMS - PCB 61462 - KiCad Schematic/fp-info-cache

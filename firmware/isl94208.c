@@ -170,7 +170,9 @@ int16_t ISL_GetInternalTemp(void){
 }
 
 bool ISL_BrownOutHandler(void){
-    if (!( ISL_GetSpecificBits_cached(ISL.USER_FLAG_0) && ISL_GetSpecificBits_cached(ISL.USER_FLAG_1) && ISL_GetSpecificBits_cached(ISL.WKPOL) )){//Check if both user flag bits are set like they should be
+    if (!(ISL_GetSpecificBits_cached(ISL.USER_FLAG_0)      // Check if both user flag bits are set like they should be
+            && ISL_GetSpecificBits_cached(ISL.USER_FLAG_1)
+            && ISL_GetSpecificBits_cached(ISL.WKPOL))){
             //ISL must have browned out. Likely due to short circuit protection kicking in.
             setErrorReasonFlags(&past_error_reason);
             I2C1_Init();    //Attempting to recover I2C bus as a last ditch effort to turn off MOSFETs before erroring out. Might not be useful.
