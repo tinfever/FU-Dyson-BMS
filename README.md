@@ -78,11 +78,10 @@ Summary:
 5.  Connect PICkit to BMS board as shown below:
 <img src="./hardware-info/images/PICkit Wiring Diagram_crop.jpg" width="720" />
 6.  Wake up battery pack by pressing button and placing magnet on reed switch (if using V7 vacuum)
-7.  While maintaining tension on wires to BMS board, make sure PICkit can see the PIC16LF1847 microcontroller, then import and write the hex file from the latest GitHub release.
-
-For more details, see video linked at the top (https://www.youtube.com/watch?v=dwyA5rBjncg).
-
-
+7.  While maintaining tension on wires to BMS board, make sure PICkit can see the PIC16LF1847 microcontroller, then import and write the hex file from the latest GitHub release.  
+<br/><br/>
+For more details, see video linked at the top (https://www.youtube.com/watch?v=dwyA5rBjncg).  
+<br/><br/>
 
 <sub><sup>Disclaimer: Lithium-ion batteries can be dangerous and must be respected. Proper cell balancing may reduce this danger which is why only trained professionals who implement cell balancing according to the manufacturer recommended best practices should work on them...wait...well that doesn't include Dyson either so I guess we're on our own. According to the internet, they can spontaneously catch fire, burn your house down, drain your retirement fund, and run away with your wife. Consider yourself warned, and please don't sue me if something goes wrong because I assume no liability and provide no warranty. See section 15 and 16 of the COPYING file for more details.
 
