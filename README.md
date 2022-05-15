@@ -66,7 +66,6 @@ If you aren’t sure if your battery is compatible, please submit a Github issue
 
 ## How to install it:
 
-[Insert image with cell voltage measurement points]
 Warning: The firmware flash process is irreversible. It is not possible to restore the factory firmware.
 
 Summary:
@@ -77,18 +76,18 @@ Summary:
 3.  Remove conformal coating over programming connection points (if applicable)
 4.  Connect PICkit to computer and, if you using a PICkit 3 or clone, install the [PICkit 3 Programmer App and Scripting Tool v3.10](https://ww1.microchip.com/downloads/en/DeviceDoc/PICkit3%20Programmer%20Application%20v3.10.zip). (https://www.microchip.com/en-us/tools-resources/archives/mplab-ecosystem)
 5.  Connect PICkit to BMS board as shown below:
-[insert wiring diagram image]
+<img src="./hardware-info/images/PICkit Wiring Diagram_crop.jpg" width="720" />
 6.  Wake up battery pack by pressing button and placing magnet on reed switch (if using V7 vacuum)
 7.  While maintaining tension on wires to BMS board, make sure PICkit can see the PIC16LF1847 microcontroller, then import and write the hex file from the latest GitHub release.
 
-For more details, see video linked at the time (https://www.youtube.com/watch?v=dwyA5rBjncg).
+For more details, see video linked at the top (https://www.youtube.com/watch?v=dwyA5rBjncg).
 
 
 
 <sub><sup>Disclaimer: Lithium-ion batteries can be dangerous and must be respected. Proper cell balancing may reduce this danger which is why only trained professionals who implement cell balancing according to the manufacturer recommended best practices should work on them...wait...well that doesn't include Dyson either so I guess we're on our own. According to the internet, they can spontaneously catch fire, burn your house down, drain your retirement fund, and run away with your wife. Consider yourself warned, and please don't sue me if something goes wrong because I assume no liability and provide no warranty. See section 15 and 16 of the COPYING file for more details.
 
 ## Miscellaneous Thoughts on Repairing a Battery Pack 
-[insert correct voltages for battery cell measurement]
+![Battery Cell Connections and Measurement Points](https://user-images.githubusercontent.com/46428760/168488794-7eb77a0e-5629-472b-b02a-e23a85353311.jpg)
 If you left your battery in storage for a long time, you may have found it no longer turns on at all and won’t charge either. This is because the battery cells have self-discharged so low that the ISL94208 won’t even turn on, which means the microcontroller won’t turn on either.
 
 If you connect a constant current power supply directly to the terminals of the battery pack bypassing the BMS board, you can slowly recharge the cells until they are back within a normal voltage range (above 3V). I've found the [PCBite probes](https://store-usa.arduino.cc/products/4x-sp10-probes-and-test-wires?selectedStore=us) to work well for easily connecting any cell or pack to a bench power supply. Soldering small wires to the nickel strips or jamming on alligator clips somehow would probably work too. I recommend charging at 50-100mA until all cells are over 3V. For safety, you don’t want to charge a battery that’s been depleted too far at the normal charge current (700mA).
@@ -194,17 +193,13 @@ Error codes will be repeated until:
 
 However, the pack will go to sleep if it remains in an error state for 60 seconds, regardless of the previous criteria. It will not sleep if the error occurred while the battery was on the charger; in this case the error code will be repeated until the charger is disconnected (so you are always aware of any errors).
 
-  **For more error information, you can dump the EEPROM data and use the EEPROM-parsing-tool to read the exact error codes, timestamp, and trigger/charge state at time of error.** See here for more information [insert link to EEPROM-parsing-tool readme]
+  **For more error information, you can dump the EEPROM data and use the EEPROM-parsing-tool to read the exact error codes, timestamp, and trigger/charge state at time of error.** https://github.com/tinfever/FU-Dyson-BMS/tree/main/EEPROM-parsing-tool
   
 
 ## How does the firmware work?
 
-  
-
-[insert state flow chart]
-
-  
-
+<img src="./firmware-info/Firmware State Flow Chart - FINAL.drawio.png"/>
+	
 **Known Issues:**
 - The code is bad. Like really bad. Like, "Oh god, I've created a monster" bad. Like, "I think I may have created something so unnecessarily complicated that I'm not sure I can ever fully understand it" bad. Honestly, the LEDs codes should probably be broken out in to their own state machine and some serious thought should be put in to whether it's the best idea for each state to handle the transitions to every other state. Also, interrupts should probably have been used...somewhere. However, it works and there are no bugs I'm currently aware of. I'm also afraid to mess with it because there is a good chance I'll break some obscure state transition logic I've either purposely or accidentally patched over with some other piece of logic.
 - On one of the BMS boards, there is a circuit that appears to provide the ability to enable the output with a series 33 Ohm resistor. I have no idea what this function could be for and it isn’t on the other BMS boards, so I haven’t implemented it.
