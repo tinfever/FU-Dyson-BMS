@@ -1,30 +1,34 @@
+# EEPROM-parsing-tool.py
+
 EEPROM-parsing-tool.py is a Python script that will convert the EEPROM logged data from the FU-Dyson-BMS firmware into something human readable.
 
 usage: EEPROM-parsing-tool.py file_path
 
 example:
->EEPROM-parsing-tool.py example-eeprom-dump.txt
-{
-    "Firmware": "Tinfever FU_Dyson_BMS V1",
-    "Total_Runtime_Seconds": 388.096,
-    "Faults": [
-        {
-            "index": 0,
-            "error_meaning": [
-                "DISCHARGE_OC_SHUNT_PICREAD"
-            ],
-            "detect_mode": "Trigger",
-            "timestamp": 53.728
-        },
-        {
-            "index": 1,
-            "error_meaning": [
-                "CHARGE_OC_FLAG"
-            ],
-            "detect_mode": "Charger",
-            "timestamp": 64.608
-        },
-...
+
+    >EEPROM-parsing-tool.py example-eeprom-dump.txt
+    {
+        "Firmware": "Tinfever FU_Dyson_BMS V1",
+        "Total_Runtime_Seconds": 388.096,
+        "Faults": [
+            {
+                "index": 0,
+                "error_meaning": [
+                    "DISCHARGE_OC_SHUNT_PICREAD"
+                ],
+                "detect_mode": "Trigger",
+                "timestamp": 53.728
+            },
+            {
+                "index": 1,
+                "error_meaning": [
+                    "CHARGE_OC_FLAG"
+                ],
+                "detect_mode": "Charger",
+                "timestamp": 64.608
+            },
+    ...
+
 You can use either the PICKit 3 Standalone Programmer App, or you can use MPLABX to read the EEPROM data.
 
 
@@ -32,7 +36,7 @@ PICKit 3 Standalone Programmer App
 -----------------------------------
 
 Short Instructions:
-Read the device using the PICKit 3 standalone app. In the EEPROM data window make sure the data is shown as "Hex Only". Right-click anywhere in the EEPROM data and click Select All, then right-click and Copy. Paste the data in to a .txt file. Run EEPROM-parsing-tool.py with the path to the saved data as the single argument.
+Read the device using the [PICkit 3 Programmer App and Scripting Tool v3.10](https://www.microchip.com/en-us/tools-resources/archives/mplab-ecosystem). In the EEPROM data window make sure the data is shown as "Hex Only". Right-click anywhere in the EEPROM data and click Select All, then right-click and Copy. Paste the data in to a .txt file. Run EEPROM-parsing-tool.py with the path to the saved data as the single argument.
 
 Detailed Instructions:
 1) Connect PICKit to computer
@@ -57,7 +61,7 @@ Detailed Instructions:
 1) Connect PICKit to computer
 2) Open MPLAB X IDE
 3) Confirm PICKit is configured to not power the target device
-4) Connect PITKit to BMS board
+4) Connect PICKit to BMS board
 5) Briefly press button on battery to wake up BMS board (you may also need to place a magnet over the reed switch if using a V7 (SV11) battery). The LED will light up when board is awake.
 6) Click the toolbar icon for "Read Device Memory" in MPLAB X (The icon looks like an up arrow. It is near the "Play" icon)
 7) Navigate to Window > Target Memory Views > EE Data Memory
