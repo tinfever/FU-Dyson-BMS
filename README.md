@@ -1,4 +1,5 @@
 
+  
 # FU-Dyson-BMS
 ### An (Unofficial) Firmware Upgrade for Dyson V6/V7 Vacuum Battery Management System (BMS)
 ![Github Header Image](https://user-images.githubusercontent.com/46428760/168486653-8b8b696d-0bcb-4679-95c9-0377f26ec008.jpg)
@@ -206,8 +207,30 @@ However, the pack will go to sleep if it remains in an error state for 60 second
 - Cell balancing is not implemented. I know this is ironic, but because the cell balancing resistors aren't installed and Dyson used 1K resistors for the VCELL# connections, even if you shorted out the connections where the cell balancing resistors would go, which most people aren't going to do (and you'd have to cut some very fine traces on the V7 BMS PCBs), the cell balancing would be extremely slow through the 1K resistors. You'd also have to either add #define setting or figure out some way for the firmware to detect if cell balance resistors are installed and then remember it, because you'd need the pack to stay awake on the charger while balancing if applicable, but go to sleep on the charger otherwise. If the pack thinks it is balancing but there are no balance connections, it would stay awake forever. Also I'm burnt out on this project and have worked on my vacuum enough for one lifetime.
 - If you use the battery hard enough for it to get over 50C, and then connect it to the charger, it will immediately trip a charge over-temp error. Since the error will have occurred while it was on the charger, the error will not clear until you remove the battery from the charger, and then wait for the error code to clear and the pack to cool below 50C. Then you can reconnect it to the charger.
 
------
 
+## FAQ
+
+**Q: Will this work with my vacuum XYZ?**
+	
+A: If it is a Dyson V6 or V7, probably. Otherwise, probably not. The best way to tell would be to disassemble your battery and see if you have a PCB number that matches one of the tested models. If it matches, it will very likely work. If it doesn't match, submit a Github issue with a high-res photo of the board and I'll try to tell you. If it has a PIC16LF1847 microcontroller with a ISL94208 battery management front-end, there is a good chance it will work and if there is a version like that but that doesn't currently work, I'm open to adding support.
+
+**Q: The batteries aren't designed to fail. They just had to keep costs down.**
+	
+A: That's not a question. However, if we accept the line of thinking that Dyson truly had to save those 2.2 cents per battery pack, there are other changes they could have made to save a lot more than that. They decided to add the reed switch to the V7 batteries. That probably added a lot more than 2.2 cents. They also added secondary over-charge protection ICs on the V7 batteries. Those probably aren't cheap. I think they also could have replaced the MOSFET they use to allow the over-charge protection ICs to pull-down one of the charge control MOSFETs with a BJT and saved a few cents there. They also could have probably found a different battery management IC without cell balancing that was cheaper. Heck, they might have been able to find a battery management IC that didn't require an additional microcontroller, and saved a whole dollar!
+
+## How you can help
+- Install the firmware on your battery and report back how it works, and if you have any issues.
+- If your battery isn't compatible, post high-res photos of the PCB here or somewhere on the internet just to promote more freely available technical information.
+- Constructive criticism on the code is welcome, although I'm highly unlikely to make any major code changes beyond bug fixes at this point. I am interested in learning how I could improve for future projects though.
+- Support [right-to-repair](https://fighttorepair.org/). This project would have been much easier if I didn't have to reverse engineer the entire BMS...twice. Even though anti-repair practices are a separate issue from planned obsolescence, some parts sure feel pretty similar. Also, I asked Dyson for schematics to the BMS so I might be less likely to burn my house down; they offered me a discount on a new battery.
+
+## Other resources
+- Full reverse-engineered schematics (with KiCad originals) for BMS boards V6  - Model SV04 - PCB 188002 and V7 - Model SV11 - PCB 279857 are located in the [hardware-info folder](./hardware-info)
+- High resolution PCB photos are located in the [hardware-info/images folder](./hardware-info/images)
+- Photos with nearly all PCB traces connections overlaid are located in the [hardware-info/images folder](./hardware-info/images). I lovingly call these PCB Spaghetti Wiring Diagrams. You'll see why. If you want to determine how the components on the PCB correlate to the schematic, you can use this. It's not pretty but it works. GIMP original files are also included. I recommend finding the pin number on the PIC or ISL of the net you are looking for, and then looking at these diagrams to see where that net connects to on the actual PCB.
+- High-res image and PDF versions of the firmware state flow chart are located in the [firmware-info folder](./firmware-info). Draw.io original files are also included.
+- As mentioned earlier, there is a script called [EEPROM-parsing-tool.py](./EEPROM-parsing-tool) that you can use to convert a raw EEPROM dump from this firmware in to something human readable. It will show the firmware version, total battery runtime in seconds (since last firmware flash), and any faults logged along with a timestamp of the fault.
+-----
 Now, if you’ll excuse me, I’m going to finally vacuum my apartment.
 
 **In memory of BMS boards SV11 #1, SV09 #1, SV04 #1, and SV04 #3 who gave their lives for this project. Their sacrifice will not be in vain.**
