@@ -1,7 +1,10 @@
 
 # FU-Dyson-BMS
 ### An (Unofficial) Firmware Upgrade for Dyson V6/V7 Vacuum Battery Management System (BMS)
+![Github Header Image](https://user-images.githubusercontent.com/46428760/168486653-8b8b696d-0bcb-4679-95c9-0377f26ec008.jpg)
+
 ------
+
 **Dyson vacuum batteries are designed to fail.**
 
 Here's why:
@@ -11,7 +14,7 @@ Here's why:
 3.  Dyson did not install these resistors. (They even designed the V6 board, PCB 61462, to support them. They just left them out.)
 4.  Rather than letting an unbalanced pack naturally result in lower usable capacity, when the cells go moderately (300mV) out of balance (by design, see step 3) Dyson programmed the battery to stop working...permanently. It will give you the 32 red blinks of death and will not charge or discharge again. It could not be fixed. Until now. [^2]
 
-[Insert Dyson wanted image]
+<img src="https://user-images.githubusercontent.com/46428760/168484825-c1c25766-edcf-4af1-a2fb-f534d9acf39a.png" width="400" />
 
 FU-Dyson-BMS is a replacement firmware for the microcontroller inside Dyson V6/V7 vacuum batteries. By using this firmware, your battery pack will not become unusable if the cells become imbalanced, you will just have reduced battery capacity as usual. It will also allow you to replace the battery cells to repair your battery, rather than be forced to replace it.
 
@@ -19,7 +22,7 @@ Demonstration, disassembly, and programming video:
 
 https://www.youtube.com/watch?v=dwyA5rBjncg
 
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/dwyA5rBjncg/0.jpg)](https://www.youtube.com/watch?v=dwyA5rBjncg)
+[![FU-Dyson-BMS - (Unofficial) Firmware Upgrade for Dyson V6/V7 Vacuum Battery Management System](https://img.youtube.com/vi/dwyA5rBjncg/0.jpg)](https://www.youtube.com/watch?v=dwyA5rBjncg)
 
 ## Revolutionary features:
 -   Cell balance LED indicator
