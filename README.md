@@ -230,6 +230,10 @@ A: That's not a question. However, if we accept the line of thinking that Dyson 
 - Photos with nearly all PCB traces connections overlaid are located in the [hardware-info/images folder](./hardware-info/images). I lovingly call these PCB Spaghetti Wiring Diagrams. You'll see why. If you want to determine how the components on the PCB correlate to the schematic, you can use this. It's not pretty but it works. GIMP original files are also included. I recommend finding the pin number on the PIC or ISL of the net you are looking for, and then looking at these diagrams to see where that net connects to on the actual PCB.
 - High-res image and PDF versions of the firmware state flow chart are located in the [firmware-info folder](./firmware-info). Draw.io original files are also included.
 - As mentioned earlier, there is a script called [EEPROM-parsing-tool.py](./EEPROM-parsing-tool) that you can use to convert a raw EEPROM dump from this firmware in to something human readable. It will show the firmware version, total battery runtime in seconds (since last firmware flash), and any faults logged along with a timestamp of the fault.
+	
+## Credit
+- DavidAlfa from EEVBlog Forum (Created I2C Library)
+- dvd4me from EEVBlog Forum (Helped with reverse engineering and provided continued support)
 -----
 Now, if you’ll excuse me, I’m going to finally vacuum my apartment.
 
