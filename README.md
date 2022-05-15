@@ -41,9 +41,13 @@ https://www.youtube.com/watch?v=dwyA5rBjncg
     
 ## Compatible vacuums/batteries:
 -   Dyson V7 - Model SV11 - PCB 279857 - Compatible + Tested
-Insert photo of PCBs
+<img src="./hardware-info/images/V7 SV11 - PCB 279857.jpg" width="400" />
+
 -   Dyson V6 - Model SV04/SV09 - PCB 61462 - Compatible + Tested
+<img src="./hardware-info/images/V6 SV04,SV09 - PCB 61462.jpg" width="400" />
+
 -   Dyson V6 - Model SV04 - PCB 188002 - Compatible + Tested
+<img src="./hardware-info/images/V6 SV04 - PCB 188002, Repaired.jpg" width="400" />
 
 Note: the model numbers are kind of weird. There are three different ways to identify/categorize your vacuum:
 1.  The advertised version number (V6, V7, etc)
