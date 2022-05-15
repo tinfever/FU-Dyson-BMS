@@ -17,7 +17,9 @@ FU-Dyson-BMS is a replacement firmware for the microcontroller inside Dyson V6/V
 
 Demonstration, disassembly, and programming video:
 
-<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/dwyA5rBjncg" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+https://www.youtube.com/watch?v=dwyA5rBjncg
+
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/dwyA5rBjncg/0.jpg)](https://www.youtube.com/watch?v=dwyA5rBjncg)
 
 ## Revolutionary features:
 -   Cell balance LED indicator
@@ -72,7 +74,7 @@ Summary:
 6.  Wake up battery pack by pressing button and placing magnet on reed switch (if using V7 vacuum)
 7.  While maintaining tension on wires to BMS board, make sure PICkit can see the PIC16LF1847 microcontroller, then import and write the hex file from the latest GitHub release.
 
-For more details, see video embedded previously.
+For more details, see video linked at the time (https://www.youtube.com/watch?v=dwyA5rBjncg).
 
 
 
