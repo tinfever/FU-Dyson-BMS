@@ -206,6 +206,7 @@ However, the pack will go to sleep if it remains in an error state for 60 second
 - If you connect the charger, the battery becomes fully charged, the pack goes to sleep, and then you remove the charger, the cell balance indicator won't show. This is because the microcontroller is completely turned off until the WKUP signal goes low (by removing the charger) and then high again (by pulling the trigger or attaching the charger).
 - Cell balancing is not implemented. I know this is ironic, but because the cell balancing resistors aren't installed and Dyson used 1K resistors for the VCELL# connections, even if you shorted out the connections where the cell balancing resistors would go, which most people aren't going to do (and you'd have to cut some very fine traces on the V7 BMS PCBs), the cell balancing would be extremely slow through the 1K resistors. You'd also have to either add #define setting or figure out some way for the firmware to detect if cell balance resistors are installed and then remember it, because you'd need the pack to stay awake on the charger while balancing if applicable, but go to sleep on the charger otherwise. If the pack thinks it is balancing but there are no balance connections, it would stay awake forever. Also I'm burnt out on this project and have worked on my vacuum enough for one lifetime.
 - If you use the battery hard enough for it to get over 50C, and then connect it to the charger, it will immediately trip a charge over-temp error. Since the error will have occurred while it was on the charger, the error will not clear until you remove the battery from the charger, and then wait for the error code to clear and the pack to cool below 50C. Then you can reconnect it to the charger.
+- There is no under-voltage charging cutoff. If the ISL94208 and PIC turn on and you connect the charger, it will charge (unless the max cell is over 4.2V of course). In theory this isn't great because it means a low voltage cell, like one at 2.3V, might end up being charged at full current (~700mA).
 
 
 ## FAQ
@@ -230,6 +231,11 @@ A: That's not a question. However, if we accept the line of thinking that Dyson 
 - Photos with nearly all PCB traces connections overlaid are located in the [hardware-info/images folder](./hardware-info/images). I lovingly call these PCB Spaghetti Wiring Diagrams. You'll see why. If you want to determine how the components on the PCB correlate to the schematic, you can use this. It's not pretty but it works. GIMP original files are also included. I recommend finding the pin number on the PIC or ISL of the net you are looking for, and then looking at these diagrams to see where that net connects to on the actual PCB.
 - High-res image and PDF versions of the firmware state flow chart are located in the [firmware-info folder](./firmware-info). Draw.io original files are also included.
 - As mentioned earlier, there is a script called [EEPROM-parsing-tool.py](./EEPROM-parsing-tool) that you can use to convert a raw EEPROM dump from this firmware in to something human readable. It will show the firmware version, total battery runtime in seconds (since last firmware flash), and any faults logged along with a timestamp of the fault.
+- [EEVBlog Forum Thread for Discussion](https://www.eevblog.com/forum/projects/fu-dyson-bms-an-(unofficial)-firmware-upgrade-for-dyson-v6v7-vacuum-bms/)
+	
+## Credit
+- DavidAlfa from EEVBlog Forum (Created I2C Library)
+- dvd4me from EEVBlog Forum (Helped with reverse engineering and provided continued support)
 -----
 Now, if you’ll excuse me, I’m going to finally vacuum my apartment.
 
