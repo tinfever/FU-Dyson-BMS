@@ -6,8 +6,8 @@
 
   (title_block
     (title "Dyson V7 BMS - PCB 279857")
-    (date "2022-05-11")
-    (rev "1.0")
+    (date "2022-05-16")
+    (rev "1.01")
     (company "tinfever")
     (comment 1 "See COPYING for license")
     (comment 2 "© 2022 tinfever")
@@ -4429,6 +4429,11 @@
   (text "0D93UL" (at 50.165 227.33 0)
     (effects (font (size 1.27 1.27)) (justify left bottom))
     (uuid 51152442-ab32-4b3f-888d-08979e9813e7)
+  )
+  (text "IC may be similar to\nNisshinbo Micro Devices R5439K \"2 to 4 Serial Cell Li-Ion or Li-Polymer Battery Protection IC for Secondary Protection\""
+    (at 241.935 165.1 0)
+    (effects (font (size 1.27 1.27)) (justify left bottom))
+    (uuid 517d691f-7ae7-4e72-9ea4-f5d2ae6754ea)
   )
   (text "This line stays low at 0.2V until pack voltage is >= 25.73V or 4.27V per cell, then it goes 12.8V high after a 2-3 second delay.\nPack voltage must go below 24.76V or cell voltage 4.10V to enable charging again.\n\nThis causes Q5 charging P-FET to have Vgs at -3V (on) (3.3V VCC - 0.3V diode drop) except for when battery cells hit 4.27V.\nThen VGS is no longer pulled down, rises to 0V, and charging is disabled.\n"
     (at 241.935 179.07 0)
