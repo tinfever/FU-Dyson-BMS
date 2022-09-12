@@ -1,6 +1,8 @@
 import csv, json
 import argparse
+from math import comb
 from pathlib import Path
+from textwrap import wrap
 
 parser = argparse.ArgumentParser()
 parser.add_argument("file_path", type=Path)
@@ -14,31 +16,31 @@ else:
     programPause = input('Press <ENTER> to quit')
     exit()
 
+temp_list = []
 combined_list = []
 
 with open(filepath) as tsv:
-    i = 0
-    correct_count = 0
-    for line in csv.reader(tsv, dialect="excel-tab"):
-        if line[0] == format(i, 'X').ljust(2, '0'):
-            correct_count += 1
-        i += 1
+    for line in tsv:
+        if line.split():    #Make sure line isn't empty
+            temp_list.append(wrap(line, 2))      #split removes all white space characters and converts remaining to a list of two characters per item            
 
-if correct_count == i:
-    drop_first_val = True
-else: 
-    drop_first_val = False
+if all(line[0] == format(i, 'X').ljust(2, '0') for i, line in enumerate(temp_list)):  #if all of the lines have a value at the beginning that matches the line number, they are probably line numbers so drop them
+    for line in temp_list:
+        line.pop(0)     #Drop first value that contains the line number
 
 
+for line in temp_list:
+    combined_list += line
 
-with open(filepath) as tsv:
-    for line in csv.reader(tsv, dialect="excel-tab"):
-        if drop_first_val:
-            line.pop(0)     #Drop first value that contains the line number
-        else:
-            line.pop()      #Drop the last value that would be empty
-        combined_list = combined_list + line
+falsecount = 0
+for item in combined_list[1::2]:        #Check if all odd items are zero, indicating hex data has zeros between each byte
+    if bool(int(item, 16)) == False:
+        falsecount += 1
 
+if falsecount == len(combined_list[1::2]):
+    print("all odd values are zero")
+    for i, item in enumerate(combined_list[1::2]):
+        combined_list.pop(i+1)          #This is kind of weird but it works. Deletes all the odd items after confirming they are all zero
 
 
 firmware_version_hex = ''.join(combined_list[:24]) 
