@@ -44,6 +44,8 @@ https://www.youtube.com/watch?v=dwyA5rBjncg
 -   Dyson V7 - Model SV11 - PCB 279857 - Compatible + Tested
 <img src="./hardware-info/images/V7 SV11 - PCB 279857.jpg" width="400" />
 
+- Dyson V7 - Model ?? - PCB 228499 - Reported Working by NemoLee
+
 -   Dyson V6 - Model SV04/SV09 - PCB 61462 - Compatible + Tested
 <img src="./hardware-info/images/V6 SV04,SV09 - PCB 61462.jpg" width="400" />
 
