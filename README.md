@@ -236,6 +236,7 @@ A: That's not a question. However, if we accept the line of thinking that Dyson 
 - As mentioned earlier, there is a script called [EEPROM-parsing-tool.py](./EEPROM-parsing-tool) that you can use to convert a raw EEPROM dump from this firmware in to something human readable. It will show the firmware version, total battery runtime in seconds (since last firmware flash), and any faults logged along with a timestamp of the fault.
 - [EEVBlog Forum Thread for Discussion](https://www.eevblog.com/forum/projects/fu-dyson-bms-an-(unofficial)-firmware-upgrade-for-dyson-v6v7-vacuum-bms/)
 - MALE20 on the EEVBlog Forum pointed out a tool on Thingiverse (Author: billsy) that might make opening the battery packs much easier. https://www.thingiverse.com/thing:3112717/files I haven't tested it but it might be worth trying.
+- dr-mark-roberts reverse engineered the V6 (PCB 188002) and V8 (PCB 180207) BMS boards long before I did. Since I never did the V8, there is some additional information there: https://github.com/dr-mark-roberts/open-dyson-battery
 	
 ## Credit
 - DavidAlfa from EEVBlog Forum (Created I2C Library)
