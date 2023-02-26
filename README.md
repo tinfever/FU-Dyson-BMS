@@ -78,9 +78,10 @@ Summary:
 2.  Make sure all cells are charged above 3V and that the pack LEDs do *something* when you press the button (with magnet on reed switch if using V7). This confirms the 3.3V rail is regulating and the PIC is awake/working.
 3.  Remove conformal coating over programming connection points (if applicable)
 4.  Connect PICkit to computer and, if you using a PICkit 3 or clone, install the [PICkit 3 Programmer App and Scripting Tool v3.10](https://ww1.microchip.com/downloads/en/DeviceDoc/PICkit3%20Programmer%20Application%20v3.10.zip). (https://www.microchip.com/en-us/tools-resources/archives/mplab-ecosystem)
-5.  Connect PICkit to BMS board as shown below:
-<img src="./hardware-info/images/PICkit Wiring Diagram_crop.jpg" width="720" />
-6.  Wake up battery pack by pressing button and placing magnet on reed switch (if using V7 vacuum)
+5.  Connect PICkit to BMS board as shown below:  
+    (Note: I now recommend not connecting the VDD wire at all. The ISL94208 chip seems keen to fail with an externally supply voltage. I'd still suggest waking up the battery pack as describe in step 6 to power the board up for programming. One user has suggested (https://github.com/tinfever/FU-Dyson-BMS/issues/24) even this may be unnecessary though.)  
+    <img src="./hardware-info/images/PICkit Wiring Diagram_crop.jpg" width="720" />
+6.  Wake up battery pack by pressing button and placing magnet on reed switch (if using V7 vacuum).
 7.  While maintaining tension on wires to BMS board, make sure PICkit can see the PIC16LF1847 microcontroller, then import and write the hex file from the latest GitHub release.  
 <br/><br/>
 For more details, see video linked at the top (https://www.youtube.com/watch?v=dwyA5rBjncg).  
