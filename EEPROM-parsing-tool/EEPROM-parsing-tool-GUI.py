@@ -58,7 +58,31 @@ def process_file(filepath):
                 error_meaning.append("ISL_INT_OVERTEMP_FLAG")
             if error_bits[1] == "1":
                 error_meaning.append("ISL_EXT_OVERTEMP_FLAG")
-            # Add more flags as per the original code
+            if error_bits[2] == "1":
+                error_meaning.append("ISL_INT_OVERTEMP_PICREAD")
+            if error_bits[3] == "1":
+                error_meaning.append("THERMISTOR_OVERTEMP_PICREAD")
+            if error_bits[4] == "1":
+                error_meaning.append("UNDERTEMP_FLAG")
+            if error_bits[5] == "1":
+                error_meaning.append("CHARGE_OC_FLAG")
+            if error_bits[6] == "1":
+                error_meaning.append("DISCHARGE_OC_FLAG")
+            if error_bits[7] == "1":
+                error_meaning.append("DISCHARGE_SC_FLAG")
+
+            if error_bits[8] == "1":
+                error_meaning.append("DISCHARGE_OC_SHUNT_PICREAD")
+            if error_bits[9] == "1":
+                error_meaning.append("CHARGE_ISL_INT_OVERTEMP_PICREAD")
+            if error_bits[10] == "1":
+                error_meaning.append("CHARGE_THERMISTOR_OVERTEMP_PICREAD")
+            if error_bits[11] == "1":
+                error_meaning.append("TEMP_HYSTERESIS")
+            if error_bits[12] == "1":
+                error_meaning.append("ISL_BROWN_OUT")
+            if error_bits[13] == "1":
+                error_meaning.append("CRITICAL_I2C_ERROR")
 
             detect_mode = (''.join(error_bits[14:])),
             detect_mode = int(detect_mode[0], 2)
