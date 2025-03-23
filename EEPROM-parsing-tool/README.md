@@ -1,6 +1,6 @@
 # EEPROM-parsing-tool.py
 
-EEPROM-parsing-tool.py is a Python script that will convert the EEPROM logged data from the FU-Dyson-BMS firmware into something human readable.
+EEPROM-parsing-tool.py is a Python script that will convert the EEPROM logged data from the FW-Dyson-BMS firmware into something human readable.
 
 usage: EEPROM-parsing-tool.py file_path
 

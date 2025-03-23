@@ -1,6 +1,6 @@
 
   
-# FU-Dyson-BMS
+# FW-Dyson-BMS
 ### An (Unofficial) Firmware Upgrade for Dyson V6/V7 Vacuum Battery Management System (BMS)
 ![Github Header Image](https://user-images.githubusercontent.com/46428760/168486653-8b8b696d-0bcb-4679-95c9-0377f26ec008.jpg)
 
@@ -17,13 +17,13 @@ Here's why:
 
 <img src="https://user-images.githubusercontent.com/46428760/168484825-c1c25766-edcf-4af1-a2fb-f534d9acf39a.png" width="400" />
 
-FU-Dyson-BMS is a replacement firmware for the microcontroller inside Dyson V6/V7 vacuum batteries. By using this firmware, your battery pack will not become unusable if the cells become imbalanced, you will just have reduced battery capacity as usual. It will also allow you to replace the battery cells to repair your battery, rather than be forced to replace it.
+FW-Dyson-BMS is a replacement firmware for the microcontroller inside Dyson V6/V7 vacuum batteries. By using this firmware, your battery pack will not become unusable if the cells become imbalanced, you will just have reduced battery capacity as usual. It will also allow you to replace the battery cells to repair your battery, rather than be forced to replace it.
 
 Demonstration, disassembly, and programming video:
 
 https://www.youtube.com/watch?v=dwyA5rBjncg
 
-[![FU-Dyson-BMS - (Unofficial) Firmware Upgrade for Dyson V6/V7 Vacuum Battery Management System](https://img.youtube.com/vi/dwyA5rBjncg/0.jpg)](https://www.youtube.com/watch?v=dwyA5rBjncg)
+[![FW-Dyson-BMS - (Unofficial) Firmware Upgrade for Dyson V6/V7 Vacuum Battery Management System](https://img.youtube.com/vi/dwyA5rBjncg/0.jpg)](https://www.youtube.com/watch?v=dwyA5rBjncg)
 
 ## Revolutionary features:
 -   Cell balance LED indicator
@@ -79,7 +79,7 @@ Summary:
 3.  Remove conformal coating over programming connection points (if applicable)
 4.  Connect PICkit to computer and, if you using a PICkit 3 or clone, install the [PICkit 3 Programmer App and Scripting Tool v3.10](https://ww1.microchip.com/downloads/en/DeviceDoc/PICkit3%20Programmer%20Application%20v3.10.zip). (https://www.microchip.com/en-us/tools-resources/archives/mplab-ecosystem)
 5.  Connect PICkit to BMS board as shown below:  
-    (Note: I now recommend not connecting the VDD wire at all. The ISL94208 chip seems keen to fail with an externally supply voltage. I'd still suggest waking up the battery pack as describe in step 6 to power the board up for programming. One user has suggested (https://github.com/tinfever/FU-Dyson-BMS/issues/24) even this may be unnecessary though.)  
+    (Note: I now recommend not connecting the VDD wire at all. The ISL94208 chip seems keen to fail with an externally supply voltage. I'd still suggest waking up the battery pack as describe in step 6 to power the board up for programming. One user has suggested (https://github.com/tinfever/FW-Dyson-BMS/issues/24) even this may be unnecessary though.)  
     <img src="./hardware-info/images/PICkit Wiring Diagram_crop.jpg" width="720" />
 6.  Wake up battery pack by pressing button and placing magnet on reed switch (if using V7 vacuum).
 7.  While maintaining tension on wires to BMS board, make sure PICkit can see the PIC16LF1847 microcontroller, then import and write the hex file from the latest GitHub release.  
@@ -196,7 +196,7 @@ Error codes will be repeated until:
 
 However, the pack will go to sleep if it remains in an error state for 60 seconds, regardless of the previous criteria. It will not sleep if the error occurred while the battery was on the charger; in this case the error code will be repeated until the charger is disconnected (so you are always aware of any errors).
 
-  **For more error information, you can dump the EEPROM data and use the EEPROM-parsing-tool to read the exact error codes, timestamp, and trigger/charge state at time of error.** https://github.com/tinfever/FU-Dyson-BMS/tree/main/EEPROM-parsing-tool
+  **For more error information, you can dump the EEPROM data and use the EEPROM-parsing-tool to read the exact error codes, timestamp, and trigger/charge state at time of error.** https://github.com/tinfever/FW-Dyson-BMS/tree/main/EEPROM-parsing-tool
   
 
 ## How does the firmware work?
