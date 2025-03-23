@@ -21,6 +21,8 @@ Demonstration, disassembly, and programming video:
 
 https://www.youtube.com/watch?v=dwyA5rBjncg
 
+<sub><sup>(This project was formerly named "FU-Dyson-BMS" but was renamed to be more polite.)
+
 ## Revolutionary features:
 -   Cell balance LED indicator
 -   State of charge LED indicator
